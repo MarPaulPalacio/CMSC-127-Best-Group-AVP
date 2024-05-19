@@ -90,10 +90,11 @@ def create_tables():
 # Call the function to create tables
 create_tables()
 
+# Create user account
 @app.route('/signup', methods = ['GET','POST'])
 def signup():
     if request.method == 'GET':
-        return render_template("signup.html")
+        return render_template("SignUp.html")
     elif request.method == 'POST':
         # Get data from form in signup.html
         username = request.form.get("username")
@@ -106,7 +107,7 @@ def signup():
 
         # Check if any required field is empty
         if not username or not password or not firstname or not lastname or not email or not user_type:
-            return "All fields are required"
+            return "All fields are required."
         
         # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -135,17 +136,18 @@ def signup():
             connection.close()
             return "New account created."
         
+# Read user account
 @app.route('/login', methods = ['GET','POST'])
 def login():
     if request.method == 'GET':
-        return render_template("login.html")
+        return render_template("Login.html")
     elif request.method == 'POST':
         # Get data from form in login.html
         username = request.form.get("username")
         password = request.form.get("password")
 
         if not username or not password:
-            return "All fields are required"
+            return "All fields are required."
         
         # Open a connection to project database
         connection = sqlite3.connect("project.db")
@@ -165,11 +167,56 @@ def login():
             stored_password = existing_user[7] # Index 7 corresponds to the password_ field
             if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
                 connection.close()
-                return "Login Success"
+                return "Login Success."
             else:
                 connection.close()
-                return "Login Failed"
+                return "Login Failed."
 
+# Update user account
+
+# Delete user account
+
+# Create food establishment
+@app.route('/admin/add-establishment', methods = ['GET','POST'])
+def addEst():
+    if request.method == 'GET':
+        return render_template("AddEst.html")
+    elif request.method == 'POST':
+        # Get data from form in AddEst.html
+        est_name = request.form.get("est_name")
+        ave_rating = 0.0
+        addr_loc = request.form.get("addr_loc")
+        
+        # Check if any required field is empty
+        if not est_name or not addr_loc:
+            return "All fields are required."
+        
+        # Open a connection to project database
+        connection = sqlite3.connect("project.db")
+        cursor = connection.cursor()
+
+        # Check if the establishment already exists
+        check_est_sql = "SELECT * FROM ESTABLISHMENT WHERE establishment_name = ? OR address_location = ?"
+        cursor.execute(check_est_sql, (est_name,addr_loc))
+        existing_est = cursor.fetchone()
+
+        # If establishment already exists, close connection
+        if existing_est:
+            connection.close()
+            return "Establishment already exists."
+        # Else add new establishment
+        else:
+            add_est_sql = "INSERT INTO ESTABLISHMENT (address_location, establishment_name, average_rating) VALUES (?,?,?)"        
+            cursor.execute(add_est_sql, (addr_loc,est_name,ave_rating))
+            connection.commit()
+            connection.close()
+            return "New establishment created."
+
+# Read food establishment
+
+# Update food establishment
+
+# Delete food establishment
 
 if __name__ == "__main__":
     app.run(debug=True, port=3002)
