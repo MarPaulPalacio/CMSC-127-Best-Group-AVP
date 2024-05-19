@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex justify-center items-center h-screen">
+    <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-150" method="post">
+        <div class="mb-3">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="firstname">
+                First Name
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="firstname" name="firstname" type="text" placeholder="Enter first name">
+        </div>
+        <div class="flex space-x-2 mb-3">
+            <div class="">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="middlename">
+                    Middle Name
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="middlename" name="middlename" type="text" placeholder="Enter middle name">
+            </div>
+            <div class="">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="lastname">
+                    Last Name
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="lastname" name="lastname" type="text" placeholder="Enter last name">
+            </div>
+        </div>
+        <div class="flex space-x-2 mb-3">
+            <div class="w-3/5">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                    Email
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" placeholder="Enter email">
+            </div>
+            <div class="w-2/5">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="usertype">
+                    User Type
+                </label>
+                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="usertype" name="usertype" style="color: #9ca3af;">
+                    <option value="" disabled selected>Select user type</option>
+                    <option value="customer">Customer</option>
+                    <option value="owner">Owner</option>
+                </select>
+            </div>            
+        </div>
+        <div class="mb-3">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="username">
+                Username
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" name="username" type="text" placeholder="Enter username">
+        </div>
+        <div class="mb-3">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="password">
+                Password
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="password" name="password" type="password" placeholder="Enter password">
+        </div>
+        <div class="flex items-center justify-between">
+            <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                Sign Up
+            </button>
+        </div>
+    </form>
+</body>
+</html>
