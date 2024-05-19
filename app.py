@@ -3,7 +3,6 @@ import bcrypt
 import psycopg2
 import urllib
 
-
 app = Flask(__name__)
 
 # PostgreSQL configuration
