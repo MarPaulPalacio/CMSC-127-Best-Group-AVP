@@ -1,79 +1,95 @@
 from flask import *
-import sqlite3
 import bcrypt
+import psycopg2
+import urllib
 
 
 app = Flask(__name__)
 
+# PostgreSQL configuration
+username = "postgres.dnwjgeuyjcopiwjpbygs"
+password = "3,dq5?C%pZJ,vX9"  # Your Supabase password
+hostname = "aws-0-ap-southeast-1.pooler.supabase.com"
+port = "5432"
+database_name = "postgres"
+
+# Properly encode the password
+encoded_password = urllib.parse.quote(password, safe='')
+
+# Construct the connection string
+supabase_connection_string = f"postgres://{username}:{encoded_password}@{hostname}:{port}/{database_name}"
+
+
 def create_tables():
     # Opening a connection to our database
-    connection = sqlite3.connect("project.db")
+    connection = psycopg2.connect(supabase_connection_string)
+
     cursor = connection.cursor()
 
     # SQL queries for creating tables
     create_account_table = """
     CREATE TABLE IF NOT EXISTS ACCOUNT (
-        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id SERIAL PRIMARY KEY,
         username VARCHAR(100) NOT NULL UNIQUE,
         firstname VARCHAR(50) NOT NULL,
         middlename VARCHAR(50),
         lastname VARCHAR(100) NOT NULL,
         email VARCHAR(50) NOT NULL UNIQUE,
-        user_type VARCHAR(8) CHECK (user_type IN ('customer','owner')) NOT NULL,
+        user_type VARCHAR(10) NOT NULL CHECK (user_type IN ('customer', 'owner')),
         password_ VARCHAR(255) NOT NULL
-    );
+    )
     """
 
     create_establishment_table = """
     CREATE TABLE IF NOT EXISTS ESTABLISHMENT (
-        establishment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        establishment_id SERIAL PRIMARY KEY,
         address_location VARCHAR(100) NOT NULL UNIQUE,
         establishment_name VARCHAR(50) NOT NULL UNIQUE,
         average_rating DECIMAL(3,2)
-    );
+    )
     """
 
     create_food_table = """
     CREATE TABLE IF NOT EXISTS FOOD (
-        food_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        food_id SERIAL PRIMARY KEY,
         foodname VARCHAR(80) NOT NULL UNIQUE,
         price DECIMAL(10,2) NOT NULL,
-        food_type VARCHAR(20) CHECK (food_type IN ('meat','vegetable','seafood','dessert','beverage')) NOT NULL,
+        food_type VARCHAR(20) NOT NULL CHECK (food_type IN ('meat','vegetable','seafood','dessert','beverage')),
         average_rating DECIMAL(3,2),
-        establishment_id INTEGER NOT NULL,
+        establishment_id INT NOT NULL,
         CONSTRAINT food_establishment_fk FOREIGN KEY (establishment_id) 
             REFERENCES ESTABLISHMENT(establishment_id)
-    );
+    )
     """
 
     create_establishment_review_table = """
-    CREATE TABLE IF NOT EXISTS ESTABLISHMENT_REVIEW(
-        review_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        establishment_id INTEGER NOT NULL,
+    CREATE TABLE IF NOT EXISTS ESTABLISHMENT_REVIEW (
+        review_id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL,
+        establishment_id INT NOT NULL,
         rating DECIMAL(3,2) NOT NULL,
         establishment_review VARCHAR(255),
-        review_datetime DATETIME NOT NULL,
+        review_datetime TIMESTAMP NOT NULL,
         CONSTRAINT est_review_user_fk FOREIGN KEY (user_id) 
             REFERENCES ACCOUNT(user_id),
         CONSTRAINT est_review_establishment_fk FOREIGN KEY (establishment_id) 
             REFERENCES ESTABLISHMENT(establishment_id)
-    );
+    )
     """
 
     create_food_review_table = """
-    CREATE TABLE IF NOT EXISTS FOOD_REVIEW(
-        review_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        food_id INTEGER NOT NULL,
+    CREATE TABLE IF NOT EXISTS FOOD_REVIEW (
+        review_id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL,
+        food_id INT NOT NULL,
         rating DECIMAL(3,2) NOT NULL,
         food_review VARCHAR(255),
-        review_datetime DATETIME NOT NULL,
+        review_datetime TIMESTAMP NOT NULL,
         CONSTRAINT fd_review_user_fk FOREIGN KEY (user_id)
             REFERENCES ACCOUNT(user_id),
         CONSTRAINT fd_review_food_fk FOREIGN KEY (food_id)
             REFERENCES FOOD(food_id)
-    );
+    )
     """
 
     # Execute the SQL queries
@@ -91,7 +107,7 @@ def create_tables():
 create_tables()
 
 # Sign up user account (Create)
-@app.route('/signup', methods = ['GET','POST'])
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'GET':
         return render_template("SignUp.html")
@@ -116,12 +132,12 @@ def signup():
         hashed_password_str = hashed_password.decode('utf-8')
 
         # Open a connection to project database
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
 
         # Check if the account already exists
-        check_user_sql = "SELECT * FROM ACCOUNT WHERE username = ? OR email = ?"
-        cursor.execute(check_user_sql, (username,email))
+        check_user_sql = "SELECT * FROM ACCOUNT WHERE username = %s OR email = %s"
+        cursor.execute(check_user_sql, (username, email))
         existing_user = cursor.fetchone()
 
         # If username or email already exists, close connection
@@ -130,14 +146,14 @@ def signup():
             return "Account already exists."
         # Else add new user
         else: 
-            add_user_sql = "INSERT INTO ACCOUNT (username, firstname, middlename, lastname, email, user_type, password_) VALUES (?, ?, ?, ?, ?, ?, ?)"
+            add_user_sql = "INSERT INTO ACCOUNT (username, firstname, middlename, lastname, email, user_type, password_) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             cursor.execute(add_user_sql, (username, firstname, middlename, lastname, email, user_type, hashed_password_str))
             connection.commit()
             connection.close()
             return "New account created."
-        
+
 # Login user account (Read)
-@app.route('/login', methods = ['GET','POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'GET':
         return render_template("Login.html")
@@ -150,11 +166,11 @@ def login():
             return "All fields are required."
         
         # Open a connection to project database
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
 
         # Check if the account exists
-        check_user_sql = "SELECT * FROM ACCOUNT WHERE username = ?"
+        check_user_sql = "SELECT * FROM ACCOUNT WHERE username = %s"
         cursor.execute(check_user_sql, (username,))
         existing_user = cursor.fetchone()
 
@@ -164,7 +180,7 @@ def login():
             return "Account does not exist."
         # Else verify password
         else:
-            stored_password = existing_user[7] # Index 7 corresponds to the password_ field
+            stored_password = existing_user[6] # Index 6 corresponds to the password_ field
             if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
                 connection.close()
                 return "Login Success."
@@ -173,9 +189,9 @@ def login():
                 return "Login Failed."
 
 # See all user accounts (Read)
-@app.route('/admin/user-list', methods = ['GET'])
+@app.route('/admin/user-list', methods=['GET'])
 def see_users():
-    connection = sqlite3.connect("project.db")
+    connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
     cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT")
     users = cursor.fetchall()
@@ -186,9 +202,9 @@ def see_users():
 @app.route('/admin/edit-user/<int:user_id>', methods=['GET', 'POST'])
 def edit_user(user_id):
     if request.method == 'GET':
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
-        cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT WHERE user_id = ?", (user_id,))
+        cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT WHERE user_id = %s", (user_id,))
         user = cursor.fetchone()
         connection.close()
         return render_template('EditUser.html', user=user)
@@ -200,12 +216,12 @@ def edit_user(user_id):
         middlename = request.form['middlename']
         lastname = request.form['lastname']
         
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
         cursor.execute("""
             UPDATE ACCOUNT
-            SET username = ?, email = ?, user_type = ?, firstname = ?, middlename = ?, lastname = ?
-            WHERE user_id = ?
+            SET username = %s, email = %s, user_type = %s, firstname = %s, middlename = %s, lastname = %s
+            WHERE user_id = %s
         """, (username, email, user_type, firstname, middlename, lastname, user_id))
         connection.commit()
         connection.close()
@@ -214,15 +230,15 @@ def edit_user(user_id):
 # Delete user account
 @app.route('/admin/delete-user/<int:user_id>', methods=['POST'])
 def delete_user(user_id):
-    connection = sqlite3.connect("project.db")
+    connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("DELETE FROM ACCOUNT WHERE user_id = ?", (user_id,))
+    cursor.execute("DELETE FROM ACCOUNT WHERE user_id = %s", (user_id,))
     connection.commit()
     connection.close()
     return redirect(url_for('see_users'))
 
 # Create food establishment
-@app.route('/admin/add-establishment', methods = ['GET','POST'])
+@app.route('/admin/add-establishment', methods=['GET', 'POST'])
 def add_est():
     if request.method == 'GET':
         return render_template("AddEst.html")
@@ -237,12 +253,12 @@ def add_est():
             return "All fields are required."
         
         # Open a connection to project database
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
 
         # Check if the establishment already exists
-        check_est_sql = "SELECT * FROM ESTABLISHMENT WHERE establishment_name = ? OR address_location = ?"
-        cursor.execute(check_est_sql, (est_name,addr_loc))
+        check_est_sql = "SELECT * FROM ESTABLISHMENT WHERE establishment_name = %s OR address_location = %s"
+        cursor.execute(check_est_sql, (est_name, addr_loc))
         existing_est = cursor.fetchone()
 
         # If establishment already exists, close connection
@@ -251,8 +267,8 @@ def add_est():
             return "Establishment already exists."
         # Else add new establishment
         else:
-            add_est_sql = "INSERT INTO ESTABLISHMENT (address_location, establishment_name, average_rating) VALUES (?,?,?)"        
-            cursor.execute(add_est_sql, (addr_loc,est_name,ave_rating))
+            add_est_sql = "INSERT INTO ESTABLISHMENT (address_location, establishment_name, average_rating) VALUES (%s, %s, %s)"        
+            cursor.execute(add_est_sql, (addr_loc, est_name, ave_rating))
             connection.commit()
             connection.close()
             return redirect(url_for('see_est'))
@@ -260,7 +276,7 @@ def add_est():
 # Read food establishment
 @app.route('/admin/establishment-list', methods=['GET'])
 def see_est():
-    connection = sqlite3.connect("project.db")
+    connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
     cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
     establishments = cursor.fetchall()
@@ -271,9 +287,9 @@ def see_est():
 @app.route('/admin/edit-establishment/<int:establishment_id>', methods=['GET', 'POST'])
 def edit_est(establishment_id):
     if request.method == 'GET':
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
-        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE establishment_id = ?", (establishment_id,))
+        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE establishment_id = %s", (establishment_id,))
         establishment = cursor.fetchone()
         connection.close()
         return render_template('EditEst.html', establishment=establishment)
@@ -282,12 +298,12 @@ def edit_est(establishment_id):
         addr_loc = request.form['addr_loc']
         ave_rating = request.form['ave_rating']
         
-        connection = sqlite3.connect("project.db")
+        connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
         cursor.execute("""
             UPDATE ESTABLISHMENT
-            SET establishment_name = ?, address_location = ?, average_rating = ?
-            WHERE establishment_id = ?
+            SET establishment_name = %s, address_location = %s, average_rating = %s
+            WHERE establishment_id = %s
         """, (est_name, addr_loc, ave_rating, establishment_id))
         connection.commit()
         connection.close()
@@ -296,9 +312,9 @@ def edit_est(establishment_id):
 # Delete food establishment
 @app.route('/admin/delete-establishment/<int:establishment_id>', methods=['POST'])
 def delete_est(establishment_id):
-    connection = sqlite3.connect("project.db")
+    connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = ?", (establishment_id,))
+    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = %s", (establishment_id,))
     connection.commit()
     connection.close()
     return redirect(url_for('see_est'))
