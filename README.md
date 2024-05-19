@@ -34,7 +34,8 @@ The task for the project team is to design a flexible and realistic database and
 
 ## Technology Stack
 
-RDBMS (MySQL, MariaDB, or PostgreSQL) + Python Flask
+- Python Flask
+- PostgreSQL
 
 ---
 Authors:
