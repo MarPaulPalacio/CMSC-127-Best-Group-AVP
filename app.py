@@ -173,7 +173,7 @@ def login():
                 return "Login Failed."
 
 # See all user accounts (Read)
-@app.route('/admin/user-list', methods = ['GET','POST'])
+@app.route('/admin/user-list', methods = ['GET'])
 def see_users():
     connection = sqlite3.connect("project.db")
     cursor = connection.cursor()
@@ -258,10 +258,50 @@ def add_est():
             return "New establishment created."
 
 # Read food establishment
+@app.route('/admin/establishment-list', methods=['GET'])
+def see_est():
+    connection = sqlite3.connect("project.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+    establishments = cursor.fetchall()
+    connection.close()
+    return render_template("EstList.html", establishments=establishments)
 
 # Update food establishment
+@app.route('/admin/edit-establishment/<int:establishment_id>', methods=['GET', 'POST'])
+def edit_est(establishment_id):
+    if request.method == 'GET':
+        connection = sqlite3.connect("project.db")
+        cursor = connection.cursor()
+        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE establishment_id = ?", (establishment_id,))
+        establishment = cursor.fetchone()
+        connection.close()
+        return render_template('EditEst.html', establishment=establishment)
+    elif request.method == 'POST':
+        est_name = request.form['est_name']
+        addr_loc = request.form['addr_loc']
+        ave_rating = request.form['ave_rating']
+        
+        connection = sqlite3.connect("project.db")
+        cursor = connection.cursor()
+        cursor.execute("""
+            UPDATE ESTABLISHMENT
+            SET establishment_name = ?, address_location = ?, average_rating = ?
+            WHERE establishment_id = ?
+        """, (est_name, addr_loc, ave_rating, establishment_id))
+        connection.commit()
+        connection.close()
+        return redirect(url_for('see_est'))
 
 # Delete food establishment
+@app.route('/admin/delete-establishment/<int:establishment_id>', methods=['POST'])
+def delete_est(establishment_id):
+    connection = sqlite3.connect("project.db")
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = ?", (establishment_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('see_est'))
 
 # Create food item 
 

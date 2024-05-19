@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Establishment List</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .first-name-column {
+            width: 200px;
+        }
+    </style>
+</head>
+<body class="flex flex-col mt-24 items-center h-screen bg-gray-100">
+    <!-- Include the navigation bar -->
+    {% include 'AdminNav.html' %}
+
+    <!-- Toolbar header -->
+    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
+        <!-- Search bar -->
+        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+
+        <!-- Dropdown sorting -->
+        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+            <option value="" disabled selected>Sort by Name or Rating</option>
+            <option value="">Sort by Name (Ascending)</option>
+            <option value="">Sort by Name (Descending)</option>
+            <option value="">Sort by Rating (Ascending)</option>
+            <option value="">Sort by Rating (Descending)</option>
+        </select>
+
+        <!-- Dropdown filter -->
+        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+            <option value="" disabled selected>Filter by Rating</option>
+            <option value="">1-1.99</option>
+            <option value="">2-2.99</option>
+            <option value="">3-3.99</option>
+            <option value="">4-4.99</option>
+            <option value="">5</option>
+        </select>
+
+        <!-- Add establishment button -->
+        <form action="{{ url_for('add_est') }}" method="get">
+            <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Add Establishment</button>
+        </form>
+    </div>
+
+    <!-- Establishment table -->
+    <div class="w-full max-w-6xl">
+        <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
+        <table class="min-w-full bg-white shadow-md rounded">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border-b">Establishment ID</th>
+                    <th class="py-2 px-4 border-b">Establishment Name</th>
+                    <th class="py-2 px-4 border-b">Address Location</th>
+                    <th class="py-2 px-4 border-b">Average Rating</th>
+                    <th class="py-2 px-4 border-b">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for establishment in establishments %}
+                <tr>
+                    <td class="py-2 px-4 border-b">{{ establishment[0] }}</td>
+                    <td class="py-2 px-4 border-b">{{ establishment[1] }}</td>
+                    <td class="py-2 px-4 border-b">{{ establishment[2] }}</td>
+                    <td class="py-2 px-4 border-b">{{ establishment[3] }}</td>
+                    <td class="py-2 px-4 border-b flex space-x-2">
+                        <form action="{{ url_for('edit_est', establishment_id=establishment[0]) }}" method="get">
+                            <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded" type="submit">Edit</button>
+                        </form>
+                        <form action="{{ url_for('delete_est', establishment_id=establishment[0]) }}" method="post">
+                            <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
