@@ -6,7 +6,9 @@
     <title>Edit User</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body class="flex justify-center items-center h-screen bg-gray-100">
+<body class="flex mt-20 justify-center h-screen bg-gray-100">
+    <!-- Include the navigation bar -->
+    {% include 'AdminNav.html' %}
     <form class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-lg" method="post">
         <h1 class="text-2xl font-bold mb-4">Edit User</h1>
         <div class="mb-3">
@@ -14,21 +16,6 @@
                 Username
             </label>
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="username" name="username" type="text" value="{{ user[1] }}">
-        </div>
-        <div class="mb-3">
-            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
-                Email
-            </label>
-            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" value="{{ user[2] }}">
-        </div>
-        <div class="mb-3">
-            <label class="block text-gray-700 text-sm font-bold mb-2" for="user_type">
-                User Type
-            </label>
-            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="user_type" name="user_type">
-                <option value="customer" {% if user[3] == 'customer' %}selected{% endif %}>Customer</option>
-                <option value="owner" {% if user[3] == 'owner' %}selected{% endif %}>Owner</option>
-            </select>
         </div>
         <div class="mb-3">
             <label class="block text-gray-700 text-sm font-bold mb-2" for="firstname">
@@ -42,13 +29,30 @@
             </label>
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="middlename" name="middlename" type="text" value="{{ user[5] }}">
         </div>
-        <div class="mb-3">
+        <div class="mb-3"> 
             <label class="block text-gray-700 text-sm font-bold mb-2" for="lastname">
                 Last Name
             </label>
             <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="lastname" name="lastname" type="text" value="{{ user[6] }}">
         </div>
-        <div class="flex items-center justify-between">
+        <div class="flex space-x-2 mb-3">
+            <div class="w-3/5">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                    Email
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" value="{{ user[2] }}">
+            </div>
+            <div class="w-2/5">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="user_type">
+                    User Type
+                </label>
+                <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="user_type" name="user_type">
+                    <option value="customer" {% if user[3] == 'customer' %}selected{% endif %}>Customer</option>
+                    <option value="owner" {% if user[3] == 'owner' %}selected{% endif %}>Owner</option>
+                </select>
+            </div>
+        </div>
+        <div class="flex items-center justify-between mt-3">
             <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
                 Save
             </button>

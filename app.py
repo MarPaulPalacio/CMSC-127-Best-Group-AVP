@@ -221,7 +221,6 @@ def delete_user(user_id):
     connection.close()
     return redirect(url_for('see_users'))
 
-
 # Create food establishment
 @app.route('/admin/add-establishment', methods = ['GET','POST'])
 def add_est():
