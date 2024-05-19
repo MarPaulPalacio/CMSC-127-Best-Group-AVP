@@ -90,7 +90,7 @@ def create_tables():
 # Call the function to create tables
 create_tables()
 
-# Create user account
+# Sign up user account (Create)
 @app.route('/signup', methods = ['GET','POST'])
 def signup():
     if request.method == 'GET':
@@ -136,7 +136,7 @@ def signup():
             connection.close()
             return "New account created."
         
-# Read user account
+# Login user account (Read)
 @app.route('/login', methods = ['GET','POST'])
 def login():
     if request.method == 'GET':
@@ -172,13 +172,59 @@ def login():
                 connection.close()
                 return "Login Failed."
 
+# See all user accounts (Read)
+@app.route('/admin/user-list', methods = ['GET','POST'])
+def see_users():
+    connection = sqlite3.connect("project.db")
+    cursor = connection.cursor()
+    cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT")
+    users = cursor.fetchall()
+    connection.close()
+    return render_template("UserList.html", users=users)
+
 # Update user account
+@app.route('/admin/edit-user/<int:user_id>', methods=['GET', 'POST'])
+def edit_user(user_id):
+    if request.method == 'GET':
+        connection = sqlite3.connect("project.db")
+        cursor = connection.cursor()
+        cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+        connection.close()
+        return render_template('EditUser.html', user=user)
+    elif request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        user_type = request.form['user_type']
+        firstname = request.form['firstname']
+        middlename = request.form['middlename']
+        lastname = request.form['lastname']
+        
+        connection = sqlite3.connect("project.db")
+        cursor = connection.cursor()
+        cursor.execute("""
+            UPDATE ACCOUNT
+            SET username = ?, email = ?, user_type = ?, firstname = ?, middlename = ?, lastname = ?
+            WHERE user_id = ?
+        """, (username, email, user_type, firstname, middlename, lastname, user_id))
+        connection.commit()
+        connection.close()
+        return redirect(url_for('see_users'))
 
 # Delete user account
+@app.route('/admin/delete-user/<int:user_id>', methods=['POST'])
+def delete_user(user_id):
+    connection = sqlite3.connect("project.db")
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM ACCOUNT WHERE user_id = ?", (user_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('see_users'))
+
 
 # Create food establishment
 @app.route('/admin/add-establishment', methods = ['GET','POST'])
-def addEst():
+def add_est():
     if request.method == 'GET':
         return render_template("AddEst.html")
     elif request.method == 'POST':
@@ -217,6 +263,14 @@ def addEst():
 # Update food establishment
 
 # Delete food establishment
+
+# Create food item 
+
+# Read food item
+
+# Update food item
+
+# Delete food item
 
 if __name__ == "__main__":
     app.run(debug=True, port=3002)
