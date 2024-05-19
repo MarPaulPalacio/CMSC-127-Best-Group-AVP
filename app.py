@@ -255,7 +255,7 @@ def add_est():
             cursor.execute(add_est_sql, (addr_loc,est_name,ave_rating))
             connection.commit()
             connection.close()
-            return "New establishment created."
+            return redirect(url_for('see_est'))
 
 # Read food establishment
 @app.route('/admin/establishment-list', methods=['GET'])
