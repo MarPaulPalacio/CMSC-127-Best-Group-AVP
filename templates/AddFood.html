@@ -8,8 +8,8 @@
 </head>
 <body class="flex flex-col justify-center items-center h-screen">
     <!-- Include the navigation bar -->
-    {% include 'AdminNav.html' %}
-    <form action="{{ url_for('add_food') }}" method="post" class="w-full max-w-lg mt-6">
+    {% include 'OwnerNav.html' %}
+    <form action="{{ url_for('add_fd') }}" method="post" class="w-full max-w-lg mt-6">
         <div class="mb-4">
             <label for="foodname" class="block text-gray-700">Food Name</label>
             <input type="text" name="foodname" id="foodname" class="px-3 py-2 border rounded-md w-full" required>

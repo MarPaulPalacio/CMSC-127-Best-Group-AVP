@@ -8,7 +8,7 @@
 </head>
 <body class="flex flex-col justify-center items-center h-screen">
     <!-- Include the navigation bar -->
-    {% include 'AdminNav.html' %}
+    {% include 'OwnerNav.html' %}
     <form action="{{ url_for('edit_fd', food_id=food[0]) }}" method="post" class="w-full max-w-lg mt-6">
         <div class="mb-4">
             <label for="foodname" class="block text-gray-700">Food Name</label>
