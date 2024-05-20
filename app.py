@@ -243,17 +243,35 @@ def login():
 def logout():
     # Remove user_id from session
     session.pop('user_id', None)
-    return redirect(url_for('login'))  # Redirect to homepage or any other desired page
+    return redirect(url_for('index'))  # Redirect to homepage or any other desired page
 
 # See all user accounts (Read)
 @app.route('/admin/user-list', methods=['GET'])
 def see_users():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+    
+    # Get user ID from the session
+    user_id = session['user_id']
+
+    # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT")
-    users = cursor.fetchall()
-    connection.close()
-    return render_template("UserList.html", users=users)
+
+    # Fetch the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # If the user is admin, continue
+    if user_type == 'admin':    
+        cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT")
+        users = cursor.fetchall()
+        connection.close()
+        return render_template("UserList.html", users=users)
+    else:
+        return redirect(url_for('unauth'))
 
 # Update user account
 @app.route('/admin/edit-user/<int:user_id>', methods=['GET', 'POST'])
