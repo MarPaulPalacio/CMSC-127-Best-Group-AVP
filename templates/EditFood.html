@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Food Item</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex flex-col justify-center items-center h-screen">
+    <!-- Include the navigation bar -->
+    {% include 'AdminNav.html' %}
+    <form action="{{ url_for('edit_fd', food_id=food[0]) }}" method="post" class="w-full max-w-lg mt-6">
+        <div class="mb-4">
+            <label for="foodname" class="block text-gray-700">Food Name</label>
+            <input type="text" name="foodname" id="foodname" class="px-3 py-2 border rounded-md w-full" value="{{ food[1] }}" required>
+        </div>
+        <div class="mb-4">
+            <label for="price" class="block text-gray-700">Price</label>
+            <input type="text" name="price" id="price" class="px-3 py-2 border rounded-md w-full" value="{{ food[2] }}" required>
+        </div>
+        <div class="mb-4">
+            <label for="food_type" class="block text-gray-700">Food Type</label>
+            <select name="food_type" id="food_type" class="px-3 py-2 border rounded-md w-full" required>
+                <option value="meat" {% if food[3] == 'meat' %}selected{% endif %}>Meat</option>
+                <option value="vegetable" {% if food[3] == 'vegetable' %}selected{% endif %}>Vegetable</option>
+                <option value="seafood" {% if food[3] == 'seafood' %}selected{% endif %}>Seafood</option>
+                <option value="dessert" {% if food[3] == 'dessert' %}selected{% endif %}>Dessert</option>
+                <option value="beverage" {% if food[3] == 'beverage' %}selected{% endif %}>Beverage</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label for="est_id" class="block text-gray-700">Establishment</label>
+            <select name="est_id" id="est_id" class="px-3 py-2 border rounded-md w-full" required>
+                {% for est in establishments %}
+                    <option value="{{ est[0] }}" {% if est[0] == food[5] %}selected{% endif %}>{{ est[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-4">
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Update Food Item
+            </button>
+        </div>
+    </form>
+</body>
+</html>

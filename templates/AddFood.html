@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Food Item</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex flex-col justify-center items-center h-screen">
+    <!-- Include the navigation bar -->
+    {% include 'AdminNav.html' %}
+    <form action="{{ url_for('add_food') }}" method="post" class="w-full max-w-lg mt-6">
+        <div class="mb-4">
+            <label for="foodname" class="block text-gray-700">Food Name</label>
+            <input type="text" name="foodname" id="foodname" class="px-3 py-2 border rounded-md w-full" required>
+        </div>
+        <div class="mb-4">
+            <label for="price" class="block text-gray-700">Price</label>
+            <input type="text" name="price" id="price" class="px-3 py-2 border rounded-md w-full" required>
+        </div>
+        <div class="mb-4">
+            <label for="food_type" class="block text-gray-700">Food Type</label>
+            <select name="food_type" id="food_type" class="px-3 py-2 border rounded-md w-full" appearance="none" style="color: #9ca3af;" required>
+                <option value="" disabled selected>Select food type</option>
+                <option value="meat">Meat</option>
+                <option value="vegetable">Vegetable</option>
+                <option value="seafood">Seafood</option>
+                <option value="dessert">Dessert</option>
+                <option value="beverage">Beverage</option>
+            </select>
+        </div>
+        <div class="mb-4">
+            <label for="est_id" class="block text-gray-700">Establishment</label>
+            <select name="est_id" id="est_id" class="px-3 py-2 border rounded-md w-full" appearance="none" style="color: #9ca3af;" required>
+                <option value="" disabled selected>Select Establishment</option>
+                {% for est in establishments %}
+                    <option value="{{ est[0] }}">{{ est[1] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-4">
+            <button type="submit" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                Add Food Item
+            </button>
+        </div>
+    </form>
+</body>
+</html>

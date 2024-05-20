@@ -397,12 +397,153 @@ def delete_est(establishment_id):
     return redirect(url_for('see_est'))
 
 # Create food item 
+@app.route('/admin/add-food', methods=['GET','POST'])
+def add_fd():
+    if request.method == 'GET':
+        # Get the user ID from the session
+        user_id = session['user_id']
+
+        # Open a connection to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Fetch establishments owned by the current user
+        cursor.execute("SELECT establishment_id, establishment_name FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+        establishments = cursor.fetchall()
+
+        # Close the connection
+        connection.close()
+
+        # Pass the establishments to the template
+        return render_template("AddFood.html", establishments=establishments)
+    elif request.method == 'POST':
+        # Get data from form in AddFood.html
+        foodname = request.form.get("foodname")
+        price = request.form.get("price")
+        food_type = request.form.get("food_type")
+        est_id = request.form.get("est_id")
+
+        # Check if any required field is empty
+        if not foodname or not price or not food_type or not est_id:
+            return "All fields are required"
+        
+        # Check if user is logged in
+        if 'user_id' not in session:
+            return "You need to login first."
+        
+        # Get the user ID from the session
+        owner_id = session['user_id']
+
+        # Open a connection to the project database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Check if the food item already exists
+        check_fd_sql = "SELECT * FROM FOOD WHERE foodname = %s AND establishment_id = %s"
+        cursor.execute(check_fd_sql, (foodname,est_id))
+        existing_fd = cursor.fetchone()
+
+        # If food item already exists, close connection
+        if existing_fd:
+            connection.close()
+            return "Food item already exists in that establishment."
+        else:
+            add_fd_sql = "INSERT INTO FOOD (foodname, price, food_type, average_rating, establishment_id, creator_id) VALUES (%s, %s, %s, %s, %s, %s)"
+            cursor.execute(add_fd_sql,(foodname,price,food_type,0.0,est_id,owner_id))
+            connection.commit()
+            connection.close()
+            return redirect(url_for('see_fd'))
 
 # Read food item
+@app.route('/admin/food-list', methods=['GET'])
+def see_fd():
+    #Check if the user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Get the user ID from the session
+    user_id = session['user_id']
+
+    # Open a conncetion to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Check the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # Fetch food items based on user type
+    if user_type == 'admin':
+        cursor.execute("""
+            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+            FROM FOOD
+            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+        """)
+    elif user_type == 'owner':
+        cursor.execute("""
+            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+            FROM FOOD
+            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+            WHERE FOOD.creator_id = %s
+        """, (user_id,))
+    else:
+        connection.close()
+        return "Unauthorized access."
+    
+    # Fetch food items
+    food_items = cursor.fetchall()
+
+    # Close the connection 
+    connection.close()
+
+    # Render the template with the food items
+    return render_template("FoodList.html", food_items=food_items)
 
 # Update food item
+@app.route('/admin/edit-food/<int:food_id>', methods=['GET', 'POST'])
+def edit_fd(food_id):
+    if request.method == 'GET':
+        # Create connection to database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        # Fetch food item details
+        cursor.execute("SELECT food_id, foodname, price, food_type, average_rating, establishment_id FROM FOOD WHERE food_id = %s", (food_id,))
+        food = cursor.fetchone()
+        # Fetch establishments owned by the current user
+        user_id = session['user_id']
+        cursor.execute("SELECT establishment_id, establishment_name FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+        establishments = cursor.fetchall()
+        # Close connection, and render page
+        connection.close()
+        return render_template('EditFood.html', food=food, establishments=establishments)
+    elif request.method == 'POST':
+        # Get data from EditFood.html
+        foodname = request.form['foodname']
+        price = request.form['price']
+        food_type = request.form['food_type']
+        est_id = request.form['est']
+        # Create connection to database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        # Update Food item
+        cursor.execute("""
+            UPDATE FOOD
+            SET foodname = %s, price = %s, food_type = %s, establishment_id = %s
+            WHERE food_id = %s
+        """, (foodname, price, food_type, est_id,food_id))
+        connection.commit()
+        connection.close()
+        return redirect(url_for('see_fd'))
 
 # Delete food item
+@app.route('/admin/delete-food/<int:food_id>', methods=['POST'])
+def delete_fd(food_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM FOOD WHERE food_id = %s", (food_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('see_fd'))
 
 if __name__ == "__main__":
     app.run(debug=True, port=3002)
