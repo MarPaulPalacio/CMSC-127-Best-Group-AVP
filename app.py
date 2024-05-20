@@ -324,7 +324,7 @@ def add_est():
             connection.close()
             return redirect(url_for('see_est'))
 
-# Read food establishment
+# Read food establishment as Owner/Admin
 @app.route('/admin/establishment-list', methods=['GET'])
 def see_est():
     # Check if the user is logged in
@@ -359,6 +359,38 @@ def see_est():
 
     # Render the template with the establishments
     return render_template("EstList.html", establishments=establishments)
+
+# Read food establishment as Customer
+@app.route('/customer/establishment-list', methods=['GET'])
+def view_est():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Get user ID from the session
+    user_id = session['user_id']
+
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # If the user is not a customer or owner, redirect to admin view
+    # if user_type == 'admin':
+    #     return redirect(url_for('see_est'))
+    
+    # Fetch all establishments for viewing
+    cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+    establishments = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the establishments
+    return render_template("ViewEst.html", establishments=establishments)
 
 # Update food establishment
 @app.route('/admin/edit-establishment/<int:establishment_id>', methods=['GET', 'POST'])
@@ -454,7 +486,7 @@ def add_fd():
             connection.close()
             return redirect(url_for('see_fd'))
 
-# Read food item
+# Read food item as admin/owner
 @app.route('/admin/food-list', methods=['GET'])
 def see_fd():
     #Check if the user is logged in
@@ -498,6 +530,56 @@ def see_fd():
 
     # Render the template with the food items
     return render_template("FoodList.html", food_items=food_items)
+
+# Read food item as customer
+@app.route('/customer/food-list', methods=['GET'])
+def view_all_fd():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch all food items with establishment names
+    cursor.execute("""
+        SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+        FROM FOOD
+        JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+    """)
+    food_items = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the food items and show_establishment_name variable set to True
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
+
+# Read food items of an establishment as a Customer
+@app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
+def view_fd(establishment_id):
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch food items for the specified establishment
+    cursor.execute("""
+        SELECT food_id, foodname, price, food_type, average_rating 
+        FROM FOOD 
+        WHERE establishment_id = %s
+    """, (establishment_id,))
+    food_items = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the food items and show_establishment_name variable set to False
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
 
 # Update food item
 @app.route('/admin/edit-food/<int:food_id>', methods=['GET', 'POST'])
