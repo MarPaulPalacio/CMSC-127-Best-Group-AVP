@@ -129,6 +129,10 @@ create_tables()
 def index():
     return render_template("Landing.html")
 
+@app.route('/unauthorized')
+def unauth():
+    return render_template("Unauthorized.html")
+
 # Sign up user account (Create)
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -197,7 +201,8 @@ def login():
         password = request.form.get("password")
 
         if not username or not password:
-            return "All fields are required."
+            flash("All fields are required.", "error")
+            return redirect(url_for('login'))
         
         # Open a connection to the project database
         connection = psycopg2.connect(supabase_connection_string)
@@ -211,7 +216,8 @@ def login():
         # If account does not exist, close connection
         if not existing_user:
             connection.close()
-            return "Account does not exist."
+            flash("Account does not exist.", "error")
+            return redirect(url_for('login'))
         # Else verify password
         else:
             stored_password = existing_user[7] # Index 7 corresponds to the password_ field
@@ -222,15 +228,16 @@ def login():
                 # Store the user ID in the session
                 session['user_id'] = user_id
                 # Check if user type is owner
-                if existing_user[6] == 'owner':  # Index 5 corresponds to the user_type field
+                if existing_user[6] == 'owner' or existing_user[6] == 'admin':  # Index 6 corresponds to the user_type field
                     connection.close()
                     return redirect(url_for('see_est'))
                 else:
                     connection.close()
-                    return "Login Success."
+                    return redirect(url_for('view_est'))
             else:
                 connection.close()
-                return "Login Failed."
+                flash("Wrong password!", "error")
+                return redirect(url_for('login'))
         
 @app.route('/logout', methods=['GET'])
 def logout():
@@ -299,11 +306,13 @@ def add_est():
         
         # Check if any required field is empty
         if not est_name or not addr_loc:
-            return "All fields are required."
+            flash("All fields are required.", "error")
+            return redirect(url_for('add_est'))
         
         # Check if the user is logged in
         if 'user_id' not in session:
-            return "You need to login first."
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
         
         # Get the user ID from the session
         owner_id = session['user_id']
@@ -320,7 +329,8 @@ def add_est():
         # If establishment already exists, close connection
         if existing_est:
             connection.close()
-            return "Establishment already exists."
+            flash("Establishment already exists.", "error")
+            return redirect(url_for('add_est'))
         # Else add new establishment
         else:
             add_est_sql = "INSERT INTO ESTABLISHMENT (address_location, establishment_name, owner_id, average_rating) VALUES (%s, %s, %s, %s)"        
@@ -334,7 +344,8 @@ def add_est():
 def see_est():
     # Check if the user is logged in
     if 'user_id' not in session:
-        return "You need to login first."
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
 
     # Get the user ID from the session
     user_id = session['user_id']
@@ -354,7 +365,7 @@ def see_est():
         cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
     else:
         connection.close()
-        return "Unauthorized access."
+        return redirect(url_for('unauth'))
 
     # Fetch establishments
     establishments = cursor.fetchall()
@@ -370,7 +381,8 @@ def see_est():
 def view_est():
     # Check if user is logged in
     if 'user_id' not in session:
-        return "You need to log in first."
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
     
     # Get user ID from the session
     user_id = session['user_id']
@@ -462,11 +474,13 @@ def add_fd():
 
         # Check if any required field is empty
         if not foodname or not price or not food_type or not est_id:
-            return "All fields are required"
+            flash("All fields are required.", "error")
+            return redirect(url_for('add_fd'))
         
         # Check if user is logged in
         if 'user_id' not in session:
-            return "You need to login first."
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
         
         # Get the user ID from the session
         owner_id = session['user_id']
@@ -483,7 +497,8 @@ def add_fd():
         # If food item already exists, close connection
         if existing_fd:
             connection.close()
-            return "Food item already exists in that establishment."
+            flash("Food item already exists in that establishment.", "error")
+            return redirect(url_for('add_fd'))
         else:
             add_fd_sql = "INSERT INTO FOOD (foodname, price, food_type, average_rating, establishment_id, creator_id) VALUES (%s, %s, %s, %s, %s, %s)"
             cursor.execute(add_fd_sql,(foodname,price,food_type,0.0,est_id,owner_id))
@@ -496,7 +511,8 @@ def add_fd():
 def see_fd():
     #Check if the user is logged in
     if 'user_id' not in session:
-        return "You need to log in first."
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
     
     # Get the user ID from the session
     user_id = session['user_id']
@@ -525,7 +541,7 @@ def see_fd():
         """, (user_id,))
     else:
         connection.close()
-        return "Unauthorized access."
+        return redirect(url_for('unauth'))
     
     # Fetch food items
     food_items = cursor.fetchall()
@@ -541,7 +557,8 @@ def see_fd():
 def view_all_fd():
     # Check if user is logged in
     if 'user_id' not in session:
-        return "You need to log in first."
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
     
     # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
@@ -566,7 +583,8 @@ def view_all_fd():
 def view_fd(establishment_id):
     # Check if user is logged in
     if 'user_id' not in session:
-        return "You need to log in first."
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
     
     # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)

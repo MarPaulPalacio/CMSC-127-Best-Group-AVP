@@ -43,6 +43,36 @@
                 Add Food Item
             </button>
         </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="fixed bottom-5 right-5 space-y-2">
+                    {% for category, message in messages %}
+                        <div class="toast hidden p-4 rounded shadow-md text-white 
+                                    {% if category == 'error' %}bg-red-500{% elif category == 'success' %}bg-green-500{% elif category == 'info' %}bg-blue-500{% elif category == 'warning' %}bg-yellow-500{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
     </form>
+
+    <!-- Include jQuery library -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        $(document).ready(function(){
+            // Show toast messages
+            $('.toast').each(function(index, element) {
+                $(element).removeClass('hidden').fadeIn();
+            });
+
+            // Hide toast messages after 3 seconds
+            setTimeout(function() {
+                $('.toast').fadeOut();
+            }, 3000);
+        });
+    </script>
 </body>
 </html>
