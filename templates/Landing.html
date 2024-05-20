@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex justify-center items-center h-screen">
+    <div class="flex flex-col bg-white shadow-md rounded px-8 pt-8 pb-8 w-150">
+        <div class="flex mb-3 items-center justify-center">
+            <form action="{{ url_for('signup') }}" method="get" class="w-full">
+                <button class="bg-blue-500 hover:bg-green-500 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Sign Up</button>
+            </form>
+        </div>
+        <div class="flex items-center justify-center">
+            <form action="{{ url_for('login') }}" method="get" class="w-full">
+                <button class="bg-blue-500 hover:bg-green-500 w-full text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Login</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

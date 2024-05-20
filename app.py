@@ -124,6 +124,11 @@ def create_tables():
 # Call the function to create tables
 create_tables()
 
+# Home/Landing Page
+@app.route('/')
+def index():
+    return render_template("Landing.html")
+
 # Sign up user account (Create)
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
