@@ -10,6 +10,31 @@
     <!-- Include the navigation bar -->
     {% include 'CustomerNav.html' %}
 
+    <!-- Toolbar header -->
+    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
+        <!-- Search bar -->
+        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+
+        <!-- Dropdown sorting -->
+        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+            <option value="" disabled selected>Sort by Name or Rating</option>
+            <option value="">Sort by Name (Ascending)</option>
+            <option value="">Sort by Name (Descending)</option>
+            <option value="">Sort by Rating (Ascending)</option>
+            <option value="">Sort by Rating (Descending)</option>
+        </select>
+
+        <!-- Dropdown filter -->
+        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+            <option value="" disabled selected>Filter by Food Type</option>
+            <option value="meat">Meat</option>
+            <option value="vegetable">Vegetable</option>
+            <option value="seafood">Seafood</option>
+            <option value="dessert">Dessert</option>
+            <option value="beverage">Beverage</option>
+        </select>
+    </div>
+
     <!-- Main content -->
     <div class="w-full max-w-6xl mb-8">
         <h1 class="text-2xl font-bold mb-4">Food List</h1>
