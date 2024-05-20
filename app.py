@@ -31,7 +31,7 @@ db_n = "project_db"
 # LOCAL Construct the connection string
 onnection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
 
-
+# Function to create tables
 def create_tables():
     # Opening a connection to our database
     connection = psycopg2.connect(supabase_connection_string)
@@ -141,8 +141,9 @@ def signup():
 
         # Check if any required field is empty
         if not username or not password or not firstname or not lastname or not email or not user_type:
-            return "All fields are required."
-        
+            flash("All fields are required.", "error")
+            return redirect(url_for('signup'))
+
         # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
@@ -161,14 +162,16 @@ def signup():
         # If username or email already exists, close connection
         if existing_user:
             connection.close()
-            return "Account already exists."
+            flash("Account already exists.", "error")
+            return redirect(url_for('signup'))
         # Else add new user
         else: 
             add_user_sql = "INSERT INTO ACCOUNT (username, firstname, middlename, lastname, email, user_type, password_) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             cursor.execute(add_user_sql, (username, firstname, middlename, lastname, email, user_type, hashed_password_str))
             connection.commit()
             connection.close()
-            return "New account created."
+            flash("Account created successfully!", "success")
+            return redirect(url_for('login'))  # Redirect to homepage or any other desired page
 
 def get_user_id_from_database(username):
     connection = psycopg2.connect(supabase_connection_string)
