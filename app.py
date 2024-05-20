@@ -5,7 +5,10 @@ import urllib
 
 app = Flask(__name__)
 
-# PostgreSQL configuration
+# Set a secret key for the session
+app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
+
+# DEPLOYED PostgreSQL configuration
 username = "postgres.dnwjgeuyjcopiwjpbygs"
 password = "3,dq5?C%pZJ,vX9"  # Your Supabase password
 hostname = "aws-0-ap-southeast-1.pooler.supabase.com"
@@ -17,6 +20,16 @@ encoded_password = urllib.parse.quote(password, safe='')
 
 # Construct the connection string
 supabase_connection_string = f"postgres://{username}:{encoded_password}@{hostname}:{port}/{database_name}"
+
+# LOCAL PostgreSQL configuration
+un = "admin127"
+pw = "ilove127"
+hn = "localhost"
+p = "5432"
+db_n = "project_db"
+
+# LOCAL Construct the connection string
+onnection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
 
 
 def create_tables():
@@ -34,7 +47,7 @@ def create_tables():
         middlename VARCHAR(50),
         lastname VARCHAR(100) NOT NULL,
         email VARCHAR(50) NOT NULL UNIQUE,
-        user_type VARCHAR(10) NOT NULL CHECK (user_type IN ('customer', 'owner')),
+        user_type VARCHAR(10) NOT NULL CHECK (user_type IN ('customer', 'owner','admin')),
         password_ VARCHAR(255) NOT NULL
     )
     """
@@ -44,7 +57,10 @@ def create_tables():
         establishment_id SERIAL PRIMARY KEY,
         address_location VARCHAR(100) NOT NULL UNIQUE,
         establishment_name VARCHAR(50) NOT NULL UNIQUE,
-        average_rating DECIMAL(3,2)
+        average_rating DECIMAL(3,2),
+        owner_id INT,
+        CONSTRAINT establishment_owner_fk FOREIGN KEY (owner_id) 
+            REFERENCES ACCOUNT(user_id)
     )
     """
 
@@ -56,8 +72,11 @@ def create_tables():
         food_type VARCHAR(20) NOT NULL CHECK (food_type IN ('meat','vegetable','seafood','dessert','beverage')),
         average_rating DECIMAL(3,2),
         establishment_id INT NOT NULL,
+        creator_id INT NOT NULL,
         CONSTRAINT food_establishment_fk FOREIGN KEY (establishment_id) 
-            REFERENCES ESTABLISHMENT(establishment_id)
+            REFERENCES ESTABLISHMENT(establishment_id),
+        CONSTRAINT food_creator_fk FOREIGN KEY (creator_id) 
+            REFERENCES ACCOUNT(user_id)
     )
     """
 
@@ -151,8 +170,16 @@ def signup():
             connection.close()
             return "New account created."
 
+def get_user_id_from_database(username):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    cursor.execute("SELECT user_id FROM ACCOUNT WHERE username = %s", (username,))
+    user_id = cursor.fetchone()[0]  # Fetch the user ID from the result
+    connection.close()
+    return user_id
+
 # Login user account (Read)
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'GET':
         return render_template("Login.html")
@@ -164,7 +191,7 @@ def login():
         if not username or not password:
             return "All fields are required."
         
-        # Open a connection to project database
+        # Open a connection to the project database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
 
@@ -179,13 +206,29 @@ def login():
             return "Account does not exist."
         # Else verify password
         else:
-            stored_password = existing_user[6] # Index 6 corresponds to the password_ field
+            stored_password = existing_user[7] # Index 7 corresponds to the password_ field
+            print("Stored Password:", stored_password)
             if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
-                connection.close()
-                return "Login Success."
+                # Get the user ID from the database
+                user_id = existing_user[0]  # Index 0 corresponds to the user_id field
+                # Store the user ID in the session
+                session['user_id'] = user_id
+                # Check if user type is owner
+                if existing_user[6] == 'owner':  # Index 5 corresponds to the user_type field
+                    connection.close()
+                    return redirect(url_for('see_est'))
+                else:
+                    connection.close()
+                    return "Login Success."
             else:
                 connection.close()
                 return "Login Failed."
+        
+@app.route('/logout', methods=['GET'])
+def logout():
+    # Remove user_id from session
+    session.pop('user_id', None)
+    return redirect(url_for('login'))  # Redirect to homepage or any other desired page
 
 # See all user accounts (Read)
 @app.route('/admin/user-list', methods=['GET'])
@@ -244,14 +287,20 @@ def add_est():
     elif request.method == 'POST':
         # Get data from form in AddEst.html
         est_name = request.form.get("est_name")
-        ave_rating = 0.0
         addr_loc = request.form.get("addr_loc")
         
         # Check if any required field is empty
         if not est_name or not addr_loc:
             return "All fields are required."
         
-        # Open a connection to project database
+        # Check if the user is logged in
+        if 'user_id' not in session:
+            return "You need to login first."
+        
+        # Get the user ID from the session
+        owner_id = session['user_id']
+
+        # Open a connection to the project database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
 
@@ -266,8 +315,8 @@ def add_est():
             return "Establishment already exists."
         # Else add new establishment
         else:
-            add_est_sql = "INSERT INTO ESTABLISHMENT (address_location, establishment_name, average_rating) VALUES (%s, %s, %s)"        
-            cursor.execute(add_est_sql, (addr_loc, est_name, ave_rating))
+            add_est_sql = "INSERT INTO ESTABLISHMENT (address_location, establishment_name, owner_id, average_rating) VALUES (%s, %s, %s, %s)"        
+            cursor.execute(add_est_sql, (addr_loc, est_name, owner_id, 0.0))
             connection.commit()
             connection.close()
             return redirect(url_for('see_est'))
@@ -275,11 +324,37 @@ def add_est():
 # Read food establishment
 @app.route('/admin/establishment-list', methods=['GET'])
 def see_est():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        return "You need to login first."
+
+    # Get the user ID from the session
+    user_id = session['user_id']
+
+    # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+
+    # Check the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # Fetch establishments based on user type
+    if user_type == 'admin':
+        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+    elif user_type == 'owner':
+        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+    else:
+        connection.close()
+        return "Unauthorized access."
+
+    # Fetch establishments
     establishments = cursor.fetchall()
+
+    # Close the connection
     connection.close()
+
+    # Render the template with the establishments
     return render_template("EstList.html", establishments=establishments)
 
 # Update food establishment

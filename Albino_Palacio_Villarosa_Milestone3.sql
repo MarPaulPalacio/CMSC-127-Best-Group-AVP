@@ -6,7 +6,7 @@ CREATE TABLE ACCOUNT (
     middlename VARCHAR(50),
     lastname VARCHAR(100) NOT NULL,
     email VARCHAR(50) NOT NULL UNIQUE,
-    user_type ENUM('customer','owner') NOT NULL,
+    user_type ENUM('customer','owner','admin') NOT NULL,
     password_ VARCHAR(255) NOT NULL
 );
 
@@ -14,7 +14,10 @@ CREATE TABLE ESTABLISHMENT (
     establishment_id INT PRIMARY KEY AUTO_INCREMENT,
     address_location VARCHAR(100) NOT NULL UNIQUE,
     establishment_name VARCHAR(50) NOT NULL UNIQUE,
-    average_rating DECIMAL(3,2)
+    average_rating DECIMAL(3,2),
+    owner_id INT, 
+    CONSTRAINT establishment_owner_fk FOREIGN KEY (owner_id) 
+        REFERENCES ACCOUNT(user_id) 
 );
 
 CREATE TABLE FOOD (
@@ -24,8 +27,11 @@ CREATE TABLE FOOD (
     food_type ENUM('meat','vegetable','seafood','dessert','beverage') NOT NULL,
     average_rating DECIMAL(3,2),
     establishment_id INT NOT NULL,
+    creator_id INT NOT NULL,  
     CONSTRAINT food_establishment_fk FOREIGN KEY (establishment_id) 
-        REFERENCES ESTABLISHMENT(establishment_id)
+        REFERENCES ESTABLISHMENT(establishment_id),
+    CONSTRAINT food_creator_fk FOREIGN KEY (creator_id) 
+        REFERENCES ACCOUNT(user_id)
 );
 
 CREATE TABLE ESTABLISHMENT_REVIEW(
@@ -49,7 +55,7 @@ CREATE TABLE FOOD_REVIEW(
     food_review VARCHAR(255),
     review_datetime DATETIME NOT NULL,
     CONSTRAINT fd_review_user_fk FOREIGN KEY (user_id)
-        REFERENCES ACCOUNT(user_id)
+        REFERENCES ACCOUNT(user_id),
     CONSTRAINT fd_review_food_fk FOREIGN KEY (food_id)
         REFERENCES FOOD(food_id)
 );
