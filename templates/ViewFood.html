@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food List</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex flex-col mt-24 items-center h-screen bg-gray-100">
+    <!-- Include the navigation bar -->
+    {% include 'CustomerNav.html' %}
+
+    <!-- Toolbar header -->
+    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
+        <!-- Search bar -->
+        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+
+        <!-- Dropdown sorting -->
+        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+            <option value="" disabled selected>Sort by Name or Rating</option>
+            <option value="">Sort by Name (Ascending)</option>
+            <option value="">Sort by Name (Descending)</option>
+            <option value="">Sort by Rating (Ascending)</option>
+            <option value="">Sort by Rating (Descending)</option>
+        </select>
+
+        <!-- Dropdown filter -->
+        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+            <option value="" disabled selected>Filter by Food Type</option>
+            <option value="meat">Meat</option>
+            <option value="vegetable">Vegetable</option>
+            <option value="seafood">Seafood</option>
+            <option value="dessert">Dessert</option>
+            <option value="beverage">Beverage</option>
+        </select>
+    </div>
+
+    <!-- Main content -->
+    <div class="w-full max-w-6xl mb-8">
+        <h1 class="text-2xl font-bold mb-4">Food List</h1>
+
+        <!-- Food Grid -->
+        <div>
+            {% if food_items %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for food in food_items %}
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <h2 class="text-lg font-bold mb-2">{{ food[1] }}</h2>
+                    <p class="text-gray-600 mb-1">Average Rating: {{ food[4] }}</p>
+                    <p class="text-gray-600 mb-1">Price: ${{ food[2] }}</p>
+                    {% if show_establishment_name %}
+                    <p class="text-gray-600">Establishment: {{ food[5] }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="flex w-full items-center justify-center">
+                <p class="text-lg font-bold text-gray-600 text-center">This establishment has no food.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Establishment List</title>
+    <title>Food List</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <style>
         .first-name-column {
@@ -27,49 +27,55 @@
             <option value="">Sort by Name (Descending)</option>
             <option value="">Sort by Rating (Ascending)</option>
             <option value="">Sort by Rating (Descending)</option>
+            <option value="">Sort by Establishment (Ascending)</option>
+            <option value="">Sort by Establishment (Descending)</option>
         </select>
 
         <!-- Dropdown filter -->
         <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Filter by Rating</option>
-            <option value="">1-1.99</option>
-            <option value="">2-2.99</option>
-            <option value="">3-3.99</option>
-            <option value="">4-4.99</option>
-            <option value="">5</option>
+            <option value="" disabled selected>Filter by Food Type</option>
+            <option value="meat">Meat</option>
+            <option value="vegetable">Vegetable</option>
+            <option value="seafood">Seafood</option>
+            <option value="dessert">Dessert</option>
+            <option value="beverage">Beverage</option>
         </select>
 
-        <!-- Add establishment button -->
-        <form action="{{ url_for('add_est') }}" method="get">
-            <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Add Establishment</button>
+        <!-- Add Food button -->
+        <form action="{{ url_for('add_fd') }}" method="get">
+            <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Add Food Item</button>
         </form>
     </div>
 
-    <!-- Establishment table -->
+    <!-- Food table -->
     <div class="w-full max-w-6xl">
-        <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
+        <h1 class="text-2xl font-bold mb-4">Food Item List</h1>
         <table class="min-w-full bg-white shadow-md rounded">
             <thead>
                 <tr>
-                    <th class="py-2 px-4 border-b">Establishment ID</th>
-                    <th class="py-2 px-4 border-b">Establishment Name</th>
-                    <th class="py-2 px-4 border-b">Address Location</th>
+                    <th class="py-2 px-4 border-b">Food ID</th>
+                    <th class="py-2 px-4 border-b">Food Name</th>
+                    <th class="py-2 px-4 border-b">Price</th>
+                    <th class="py-2 px-4 border-b">Food Type</th>
                     <th class="py-2 px-4 border-b">Average Rating</th>
+                    <th class="py-2 px-4 border-b">Establishment</th>
                     <th class="py-2 px-4 border-b">Actions</th>
                 </tr>
             </thead>
             <tbody>
-                {% for establishment in establishments %}
+                {% for food in food_items %}
                 <tr>
-                    <td class="py-2 px-4 border-b text-center">{{ establishment[0] }}</td>
-                    <td class="py-2 px-4 border-b text-center">{{ establishment[1] }}</td>
-                    <td class="py-2 px-4 border-b">{{ establishment[2] }}</td>
-                    <td class="py-2 px-4 border-b text-center">{{ establishment[3] }}</td>
+                    <td class="py-2 px-4 border-b text-center">{{ food[0] }}</td>
+                    <td class="py-2 px-4 border-b text-center">{{ food[1] }}</td>
+                    <td class="py-2 px-4 border-b text-center">{{ food[2] }}</td>
+                    <td class="py-2 px-4 border-b text-center">{{ food[3] }}</td>
+                    <td class="py-2 px-4 border-b text-center">{{ food[4] }}</td>
+                    <td class="py-2 px-4 border-b text-center">{{ food[5] }}</td>
                     <td class="py-2 px-4 border-b flex space-x-2">
-                        <form action="{{ url_for('edit_est', establishment_id=establishment[0]) }}" method="get">
+                        <form action="{{ url_for('edit_fd', food_id=food[0]) }}" method="get">
                             <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded" type="submit">Edit</button>
                         </form>
-                        <form action="{{ url_for('delete_est', establishment_id=establishment[0]) }}" method="post">
+                        <form action="{{ url_for('delete_fd', food_id=food[0]) }}" method="post">
                             <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" type="submit">Delete</button>
                         </form>
                     </td>

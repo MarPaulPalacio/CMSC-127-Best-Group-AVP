@@ -31,7 +31,7 @@ db_n = "project_db"
 # LOCAL Construct the connection string
 onnection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
 
-
+# Function to create tables
 def create_tables():
     # Opening a connection to our database
     connection = psycopg2.connect(supabase_connection_string)
@@ -124,6 +124,11 @@ def create_tables():
 # Call the function to create tables
 create_tables()
 
+# Home/Landing Page
+@app.route('/')
+def index():
+    return render_template("Landing.html")
+
 # Sign up user account (Create)
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -141,8 +146,9 @@ def signup():
 
         # Check if any required field is empty
         if not username or not password or not firstname or not lastname or not email or not user_type:
-            return "All fields are required."
-        
+            flash("All fields are required.", "error")
+            return redirect(url_for('signup'))
+
         # Hash the password
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
@@ -161,14 +167,16 @@ def signup():
         # If username or email already exists, close connection
         if existing_user:
             connection.close()
-            return "Account already exists."
+            flash("Account already exists.", "error")
+            return redirect(url_for('signup'))
         # Else add new user
         else: 
             add_user_sql = "INSERT INTO ACCOUNT (username, firstname, middlename, lastname, email, user_type, password_) VALUES (%s, %s, %s, %s, %s, %s, %s)"
             cursor.execute(add_user_sql, (username, firstname, middlename, lastname, email, user_type, hashed_password_str))
             connection.commit()
             connection.close()
-            return "New account created."
+            flash("Account created successfully!", "success")
+            return redirect(url_for('login'))  # Redirect to homepage or any other desired page
 
 def get_user_id_from_database(username):
     connection = psycopg2.connect(supabase_connection_string)
@@ -321,7 +329,7 @@ def add_est():
             connection.close()
             return redirect(url_for('see_est'))
 
-# Read food establishment
+# Read food establishment as Owner/Admin
 @app.route('/admin/establishment-list', methods=['GET'])
 def see_est():
     # Check if the user is logged in
@@ -356,6 +364,38 @@ def see_est():
 
     # Render the template with the establishments
     return render_template("EstList.html", establishments=establishments)
+
+# Read food establishment as Customer
+@app.route('/customer/establishment-list', methods=['GET'])
+def view_est():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Get user ID from the session
+    user_id = session['user_id']
+
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # If the user is not a customer or owner, redirect to admin view
+    # if user_type == 'admin':
+    #     return redirect(url_for('see_est'))
+    
+    # Fetch all establishments for viewing
+    cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+    establishments = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the establishments
+    return render_template("ViewEst.html", establishments=establishments)
 
 # Update food establishment
 @app.route('/admin/edit-establishment/<int:establishment_id>', methods=['GET', 'POST'])
@@ -394,12 +434,203 @@ def delete_est(establishment_id):
     return redirect(url_for('see_est'))
 
 # Create food item 
+@app.route('/admin/add-food', methods=['GET','POST'])
+def add_fd():
+    if request.method == 'GET':
+        # Get the user ID from the session
+        user_id = session['user_id']
 
-# Read food item
+        # Open a connection to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Fetch establishments owned by the current user
+        cursor.execute("SELECT establishment_id, establishment_name FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+        establishments = cursor.fetchall()
+
+        # Close the connection
+        connection.close()
+
+        # Pass the establishments to the template
+        return render_template("AddFood.html", establishments=establishments)
+    elif request.method == 'POST':
+        # Get data from form in AddFood.html
+        foodname = request.form.get("foodname")
+        price = request.form.get("price")
+        food_type = request.form.get("food_type")
+        est_id = request.form.get("est_id")
+
+        # Check if any required field is empty
+        if not foodname or not price or not food_type or not est_id:
+            return "All fields are required"
+        
+        # Check if user is logged in
+        if 'user_id' not in session:
+            return "You need to login first."
+        
+        # Get the user ID from the session
+        owner_id = session['user_id']
+
+        # Open a connection to the project database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Check if the food item already exists
+        check_fd_sql = "SELECT * FROM FOOD WHERE foodname = %s AND establishment_id = %s"
+        cursor.execute(check_fd_sql, (foodname,est_id))
+        existing_fd = cursor.fetchone()
+
+        # If food item already exists, close connection
+        if existing_fd:
+            connection.close()
+            return "Food item already exists in that establishment."
+        else:
+            add_fd_sql = "INSERT INTO FOOD (foodname, price, food_type, average_rating, establishment_id, creator_id) VALUES (%s, %s, %s, %s, %s, %s)"
+            cursor.execute(add_fd_sql,(foodname,price,food_type,0.0,est_id,owner_id))
+            connection.commit()
+            connection.close()
+            return redirect(url_for('see_fd'))
+
+# Read food item as admin/owner
+@app.route('/admin/food-list', methods=['GET'])
+def see_fd():
+    #Check if the user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Get the user ID from the session
+    user_id = session['user_id']
+
+    # Open a conncetion to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Check the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # Fetch food items based on user type
+    if user_type == 'admin':
+        cursor.execute("""
+            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+            FROM FOOD
+            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+        """)
+    elif user_type == 'owner':
+        cursor.execute("""
+            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+            FROM FOOD
+            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+            WHERE FOOD.creator_id = %s
+        """, (user_id,))
+    else:
+        connection.close()
+        return "Unauthorized access."
+    
+    # Fetch food items
+    food_items = cursor.fetchall()
+
+    # Close the connection 
+    connection.close()
+
+    # Render the template with the food items
+    return render_template("FoodList.html", food_items=food_items)
+
+# Read food item as customer
+@app.route('/customer/food-list', methods=['GET'])
+def view_all_fd():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch all food items with establishment names
+    cursor.execute("""
+        SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+        FROM FOOD
+        JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+    """)
+    food_items = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the food items and show_establishment_name variable set to True
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
+
+# Read food items of an establishment as a Customer
+@app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
+def view_fd(establishment_id):
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+    
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch food items for the specified establishment
+    cursor.execute("""
+        SELECT food_id, foodname, price, food_type, average_rating 
+        FROM FOOD 
+        WHERE establishment_id = %s
+    """, (establishment_id,))
+    food_items = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the food items and show_establishment_name variable set to False
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
 
 # Update food item
+@app.route('/admin/edit-food/<int:food_id>', methods=['GET', 'POST'])
+def edit_fd(food_id):
+    if request.method == 'GET':
+        # Create connection to database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        # Fetch food item details
+        cursor.execute("SELECT food_id, foodname, price, food_type, average_rating, establishment_id FROM FOOD WHERE food_id = %s", (food_id,))
+        food = cursor.fetchone()
+        # Fetch establishments owned by the current user
+        user_id = session['user_id']
+        cursor.execute("SELECT establishment_id, establishment_name FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+        establishments = cursor.fetchall()
+        # Close connection, and render page
+        connection.close()
+        return render_template('EditFood.html', food=food, establishments=establishments)
+    elif request.method == 'POST':
+        # Get data from EditFood.html
+        foodname = request.form['foodname']
+        price = request.form['price']
+        food_type = request.form['food_type']
+        est_id = request.form['est']
+        # Create connection to database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        # Update Food item
+        cursor.execute("""
+            UPDATE FOOD
+            SET foodname = %s, price = %s, food_type = %s, establishment_id = %s
+            WHERE food_id = %s
+        """, (foodname, price, food_type, est_id,food_id))
+        connection.commit()
+        connection.close()
+        return redirect(url_for('see_fd'))
 
 # Delete food item
+@app.route('/admin/delete-food/<int:food_id>', methods=['POST'])
+def delete_fd(food_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    cursor.execute("DELETE FROM FOOD WHERE food_id = %s", (food_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('see_fd'))
 
 if __name__ == "__main__":
     app.run(debug=True, port=3002)

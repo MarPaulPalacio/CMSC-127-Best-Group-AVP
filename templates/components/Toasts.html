@@ -1,0 +1,9 @@
+<!-- THIS IS NOT WORKING YET -->
+<div class="fixed bottom-5 right-5 space-y-2">
+    {% for category, message in messages %}
+        <div class="toast hidden p-4 rounded shadow-md text-white 
+                    {% if category == 'error' %}bg-red-500{% elif category == 'success' %}bg-green-500{% elif category == 'info' %}bg-blue-500{% elif category == 'warning' %}bg-yellow-500{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+</div>
