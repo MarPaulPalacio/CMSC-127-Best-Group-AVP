@@ -29,7 +29,7 @@ p = "5432"
 db_n = "project_db"
 
 # LOCAL Construct the connection string
-onnection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
+connection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
 
 # Function to create tables
 def create_tables():
@@ -644,7 +644,7 @@ def edit_fd(food_id):
         foodname = request.form['foodname']
         price = request.form['price']
         food_type = request.form['food_type']
-        est_id = request.form['est']
+        est_id = request.form['est_id']
         # Create connection to database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()

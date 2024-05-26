@@ -20,7 +20,7 @@
         </div>
         <div class="mb-4">
             <label for="food_type" class="block text-gray-700">Food Type</label>
-            <select name="food_type" id="food_type" class="px-3 py-2 border rounded-md w-full" appearance="none" style="color: #9ca3af;" required>
+            <select name="food_type" id="food_type" class="appearance-none px-3 py-2 border rounded-md w-full" style="color: #9ca3af;" required>
                 <option value="" disabled selected>Select food type</option>
                 <option value="meat">Meat</option>
                 <option value="vegetable">Vegetable</option>
@@ -31,7 +31,7 @@
         </div>
         <div class="mb-4">
             <label for="est_id" class="block text-gray-700">Establishment</label>
-            <select name="est_id" id="est_id" class="px-3 py-2 border rounded-md w-full" appearance="none" style="color: #9ca3af;" required>
+            <select name="est_id" id="est_id" class="appearance-none px-3 py-2 border rounded-md w-full" style="color: #9ca3af;" required>
                 <option value="" disabled selected>Select Establishment</option>
                 {% for est in establishments %}
                     <option value="{{ est[0] }}">{{ est[1] }}</option>
