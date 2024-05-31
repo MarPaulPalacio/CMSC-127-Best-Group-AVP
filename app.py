@@ -1,3 +1,4 @@
+import datetime
 from flask import *
 import bcrypt
 import psycopg2
@@ -397,35 +398,26 @@ def see_est():
 # Read food establishment as Customer
 @app.route('/customer/establishment-list', methods=['GET'])
 def view_est():
-    # Check if user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-    
-    # Get user ID from the session
-    user_id = session['user_id']
 
-    # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-
-    # Fetch the user type
-    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
-    user_type = cursor.fetchone()[0]
-
-    # If the user is not a customer or owner, redirect to admin view
-    # if user_type == 'admin':
-    #     return redirect(url_for('see_est'))
-    
-    # Fetch all establishments for viewing
-    cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+    cursor.execute("""
+        SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
+        FROM ESTABLISHMENT E
+        LEFT JOIN (
+            SELECT establishment_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', establishment_review, 'datetime', review_datetime)) AS reviews
+            FROM ESTABLISHMENT_REVIEW
+            GROUP BY establishment_id
+        ) RE ON E.establishment_id = RE.establishment_id
+    """)
     establishments = cursor.fetchall()
-
-    # Close the connection
     connection.close()
 
-    # Render the template with the establishments
     return render_template("ViewEst.html", establishments=establishments)
+
 
 # Update food establishment
 @app.route('/admin/edit-establishment/<int:establishment_id>', methods=['GET', 'POST'])
@@ -667,6 +659,49 @@ def delete_fd(food_id):
     connection.commit()
     connection.close()
     return redirect(url_for('see_fd'))
+
+@app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
+def review_establishment(establishment_id):
+    if request.method == 'GET':
+        return render_template('ReviewEstablishment.html', establishment_id=establishment_id)
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+        
+        # Check if user is logged in
+        if 'user_id' not in session:
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
+
+        user_id = session['user_id']
+
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        
+        # Insert review into the database
+        add_review_sql = """
+        INSERT INTO ESTABLISHMENT_REVIEW (user_id, establishment_id, rating, establishment_review, review_datetime)
+        VALUES (%s, %s, %s, %s, NOW())
+        """
+        cursor.execute(add_review_sql, (user_id, establishment_id, rating, review))
+        connection.commit()
+        
+        # Update average rating of the establishment
+        update_avg_rating_sql = """
+        UPDATE ESTABLISHMENT
+        SET average_rating = (
+            SELECT AVG(rating) FROM ESTABLISHMENT_REVIEW WHERE establishment_id = %s
+        )
+        WHERE establishment_id = %s
+        """
+        cursor.execute(update_avg_rating_sql, (establishment_id, establishment_id))
+        connection.commit()
+        
+        connection.close()
+        
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('view_est'))
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=3002)
