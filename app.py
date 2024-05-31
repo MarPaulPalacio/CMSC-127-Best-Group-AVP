@@ -701,6 +701,71 @@ def review_establishment(establishment_id):
         
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_est'))
+    
+@app.route('/customer/food-list', methods=['GET'])
+def view_food():
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    cursor.execute("""
+        SELECT F.food_id, F.food_name, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
+        FROM FOOD F
+        LEFT JOIN (
+            SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
+            FROM FOOD_REVIEW
+            GROUP BY food_id
+        ) FR ON F.food_id = FR.food_id
+    """)
+    food_items = cursor.fetchall()
+    connection.close()
+
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
+    
+    
+@app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
+def review_food(food_id):
+    if request.method == 'GET':
+        return render_template('ReviewFood.html', food_id=food_id)
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+        
+        # Check if user is logged in
+        if 'user_id' not in session:
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
+
+        user_id = session['user_id']
+
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        
+        # Insert review into the database
+        add_review_sql = """
+        INSERT INTO FOOD_REVIEW (user_id, food_id, rating, food_review, review_datetime)
+        VALUES (%s, %s, %s, %s, NOW())
+        """
+        cursor.execute(add_review_sql, (user_id, food_id, rating, review))
+        connection.commit()
+        
+        # Update average rating of the food item
+        update_avg_rating_sql = """
+        UPDATE FOOD
+        SET average_rating = (
+            SELECT AVG(rating) FROM FOOD_REVIEW WHERE food_id = %s
+        )
+        WHERE food_id = %s
+        """
+        cursor.execute(update_avg_rating_sql, (food_id, food_id))
+        connection.commit()
+        
+        connection.close()
+        
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('view_food'))
 
 
 if __name__ == "__main__":

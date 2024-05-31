@@ -51,6 +51,7 @@
                     {% if show_establishment_name %}
                     <p class="text-gray-600">Establishment: {{ food[5] }}</p>
                     {% endif %}
+                    <a href="{{ url_for('review_food', food_id=food[0]) }}" class="text-blue-500">Review this Food</a>
                 </div>
                 {% endfor %}
             </div>
