@@ -660,6 +660,8 @@ def delete_fd(food_id):
     connection.close()
     return redirect(url_for('see_fd'))
 
+
+# Add establishment review
 @app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
 def review_establishment(establishment_id):
     if request.method == 'GET':
@@ -701,7 +703,9 @@ def review_establishment(establishment_id):
         
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_est'))
-    
+
+
+# See all review for an establishment   
 @app.route('/customer/establishment-reviews/<int:establishment_id>', methods=['GET'])
 def view_establishment_reviews(establishment_id):
     connection = psycopg2.connect(supabase_connection_string)
@@ -731,6 +735,7 @@ def view_establishment_reviews(establishment_id):
 
     return render_template('EstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name)
 
+
 @app.route('/customer/food-list', methods=['GET'])
 def view_food():
     if 'user_id' not in session:
@@ -753,7 +758,7 @@ def view_food():
 
     return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
     
-    
+# Add food review
 @app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
 def review_food(food_id):
     if request.method == 'GET':
@@ -795,6 +800,36 @@ def review_food(food_id):
         
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_food'))
+
+# See all review for a food
+@app.route('/customer/food-reviews/<int:food_id>', methods=['GET'])
+def view_food_reviews(food_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Query to get the food name
+    food_name_query = "SELECT food.foodname FROM FOOD WHERE food_id = %s"
+    cursor.execute(food_name_query, (food_id,))
+    food_name = cursor.fetchone()
+
+    if food_name:
+        food_name = food_name[0]
+    else:
+        flash("Food item not found.", "error")
+        return redirect(url_for('view_food'))
+
+    # Query to select all food reviews for the specific food item
+    select_reviews_query = """
+    SELECT fr.rating, fr.food_review, fr.review_datetime
+    FROM FOOD_REVIEW fr
+    WHERE fr.food_id = %s
+    """
+    cursor.execute(select_reviews_query, (food_id,))
+    food_reviews = cursor.fetchall()
+
+    connection.close()
+
+    return render_template('FoodReviews.html', food_reviews=food_reviews, food_name=food_name)
 
 
 if __name__ == "__main__":
