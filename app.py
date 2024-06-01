@@ -727,7 +727,7 @@ def update_review_establishment(review_id, establishment_id):
         review = request.form.get('review')
         
 
-        print(review)
+        print(request.form)
         # Connect to the database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
