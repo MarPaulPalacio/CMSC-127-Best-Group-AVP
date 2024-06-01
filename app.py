@@ -702,6 +702,35 @@ def review_establishment(establishment_id):
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_est'))
     
+@app.route('/customer/establishment-reviews/<int:establishment_id>', methods=['GET'])
+def view_establishment_reviews(establishment_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Query to get the establishment name
+    establishment_name_query = "SELECT establishment_name FROM ESTABLISHMENT WHERE establishment_id = %s"
+    cursor.execute(establishment_name_query, (establishment_id,))
+    establishment_name = cursor.fetchone()
+
+    if establishment_name:
+        establishment_name = establishment_name[0]
+    else:
+        flash("Establishment not found.", "error")
+        return redirect(url_for('view_est'))
+
+    # Query to select all establishment reviews for the specific establishment
+    select_reviews_query = """
+    SELECT er.rating, er.establishment_review, er.review_datetime
+    FROM ESTABLISHMENT_REVIEW er
+    WHERE er.establishment_id = %s
+    """
+    cursor.execute(select_reviews_query, (establishment_id,))
+    establishment_reviews = cursor.fetchall()
+
+    connection.close()
+
+    return render_template('EstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name)
+
 @app.route('/customer/food-list', methods=['GET'])
 def view_food():
     if 'user_id' not in session:
