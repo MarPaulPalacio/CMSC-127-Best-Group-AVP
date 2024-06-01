@@ -715,19 +715,19 @@ def review_establishment(establishment_id):
         return redirect(url_for('view_est'))
 
 # Add establishment review
-@app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
+@app.route('/customer/review-establishment/<int:review_id>/<int:establishment_id>', methods=['GET', 'POST'])
 def update_review_establishment(review_id, establishment_id):
     
     # If the request method is GET, render the review form
     if request.method == 'GET':
-        return render_template('UpdateReviewEstablishment.html', review_id=review_id)
+        return render_template('UpdateReviewEstablishment.html', review_id=review_id, establishment_id = establishment_id)
     # If the request method is POST, handle form submission
     elif request.method == 'POST':
         rating = request.form.get('rating')
         review = request.form.get('review')
         
 
-
+        print(review)
         # Connect to the database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
