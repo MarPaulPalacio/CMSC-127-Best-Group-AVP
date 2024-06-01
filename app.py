@@ -664,8 +664,11 @@ def delete_fd(food_id):
 # Add establishment review
 @app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
 def review_establishment(establishment_id):
+    
+    # If the request method is GET, render the review form
     if request.method == 'GET':
         return render_template('ReviewEstablishment.html', establishment_id=establishment_id)
+    # If the request method is POST, handle form submission
     elif request.method == 'POST':
         rating = request.form.get('rating')
         review = request.form.get('review')
@@ -677,6 +680,7 @@ def review_establishment(establishment_id):
 
         user_id = session['user_id']
 
+        # Connect to the database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
         
@@ -685,7 +689,9 @@ def review_establishment(establishment_id):
         INSERT INTO ESTABLISHMENT_REVIEW (user_id, establishment_id, rating, establishment_review, review_datetime)
         VALUES (%s, %s, %s, %s, NOW())
         """
+        # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table.
         cursor.execute(add_review_sql, (user_id, establishment_id, rating, review))
+        # Save Changes
         connection.commit()
         
         # Update average rating of the establishment
@@ -696,9 +702,13 @@ def review_establishment(establishment_id):
         )
         WHERE establishment_id = %s
         """
+
+        # Execute the SQL query to update the average rating
         cursor.execute(update_avg_rating_sql, (establishment_id, establishment_id))
+        # Save Changes
         connection.commit()
         
+        # Close the database connection
         connection.close()
         
         flash("Review submitted successfully!", "success")
@@ -708,6 +718,8 @@ def review_establishment(establishment_id):
 # See all review for an establishment   
 @app.route('/customer/establishment-reviews/<int:establishment_id>', methods=['GET'])
 def view_establishment_reviews(establishment_id):
+
+    # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
 
@@ -716,6 +728,7 @@ def view_establishment_reviews(establishment_id):
     cursor.execute(establishment_name_query, (establishment_id,))
     establishment_name = cursor.fetchone()
 
+    # If the establishment is found, retrieve the name
     if establishment_name:
         establishment_name = establishment_name[0]
     else:
@@ -728,22 +741,30 @@ def view_establishment_reviews(establishment_id):
     FROM ESTABLISHMENT_REVIEW er
     WHERE er.establishment_id = %s
     """
+
+    # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
     cursor.execute(select_reviews_query, (establishment_id,))
     establishment_reviews = cursor.fetchall()
 
+    # Close the database connection
     connection.close()
 
-    return render_template('EstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name)
+    return render_template('ViewEstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name)
 
 
 @app.route('/customer/food-list', methods=['GET'])
 def view_food():
+
+    # Check if user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
 
+    # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
+
+    # Query to select all food items and their reviews
     cursor.execute("""
         SELECT F.food_id, F.food_name, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
         FROM FOOD F
@@ -753,7 +774,10 @@ def view_food():
             GROUP BY food_id
         ) FR ON F.food_id = FR.food_id
     """)
+
+    # Fetch all rows from the executed query
     food_items = cursor.fetchall()
+    # Close the database connection
     connection.close()
 
     return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
@@ -761,8 +785,11 @@ def view_food():
 # Add food review
 @app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
 def review_food(food_id):
+
+    # If the request method is GET, render the review form
     if request.method == 'GET':
         return render_template('ReviewFood.html', food_id=food_id)
+    # If the request method is POST, handle form submission
     elif request.method == 'POST':
         rating = request.form.get('rating')
         review = request.form.get('review')
@@ -774,6 +801,7 @@ def review_food(food_id):
 
         user_id = session['user_id']
 
+        # Connect to the connection
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
         
@@ -782,6 +810,7 @@ def review_food(food_id):
         INSERT INTO FOOD_REVIEW (user_id, food_id, rating, food_review, review_datetime)
         VALUES (%s, %s, %s, %s, NOW())
         """
+        # Execute the SQL query to add a review for a food item into the database and save changes
         cursor.execute(add_review_sql, (user_id, food_id, rating, review))
         connection.commit()
         
@@ -793,9 +822,12 @@ def review_food(food_id):
         )
         WHERE food_id = %s
         """
+
+        # Execute the SQL query to update the average rating and save changes
         cursor.execute(update_avg_rating_sql, (food_id, food_id))
         connection.commit()
         
+        # Close the connection to the database
         connection.close()
         
         flash("Review submitted successfully!", "success")
@@ -804,6 +836,8 @@ def review_food(food_id):
 # See all review for a food
 @app.route('/customer/food-reviews/<int:food_id>', methods=['GET'])
 def view_food_reviews(food_id):
+
+    # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
 
@@ -812,6 +846,7 @@ def view_food_reviews(food_id):
     cursor.execute(food_name_query, (food_id,))
     food_name = cursor.fetchone()
 
+    # If the food item is found, retrieve the name
     if food_name:
         food_name = food_name[0]
     else:
@@ -824,12 +859,15 @@ def view_food_reviews(food_id):
     FROM FOOD_REVIEW fr
     WHERE fr.food_id = %s
     """
+    # Execute the SQL query to select all food reviews for the specific food item
     cursor.execute(select_reviews_query, (food_id,))
+    # Fetch all the selected food reviews
     food_reviews = cursor.fetchall()
 
+    # Close the connection to the database
     connection.close()
 
-    return render_template('FoodReviews.html', food_reviews=food_reviews, food_name=food_name)
+    return render_template('ViewFoodReviews.html', food_reviews=food_reviews, food_name=food_name)
 
 
 if __name__ == "__main__":
