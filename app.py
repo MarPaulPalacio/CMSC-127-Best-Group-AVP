@@ -395,16 +395,23 @@ def see_est():
     # Render the template with the establishments
     return render_template("EstList.html", establishments=establishments)
 
-# Read food establishment as Customer
 @app.route('/customer/establishment-list', methods=['GET'])
 def view_est():
+    # Check if the user is logged in by verifying if 'user_id' is in the session
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
 
+    # Retrieve sorting and filtering parameters from the request URL
+    sort_by = request.args.get('sort')
+    filter_by = request.args.get('filter')
+
+    # Connecting to database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("""
+
+    # SQL query to retrieve establishment details along with their reviews
+    query = """
         SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
         FROM ESTABLISHMENT E
         LEFT JOIN (
@@ -412,10 +419,37 @@ def view_est():
             FROM ESTABLISHMENT_REVIEW
             GROUP BY establishment_id
         ) RE ON E.establishment_id = RE.establishment_id
-    """)
+    """
+
+    # Apply filtering based on average rating if a filter is specified
+    if filter_by:
+        filter_query = {
+            '1-1.99': 'WHERE E.average_rating BETWEEN 1 AND 1.99',
+            '2-2.99': 'WHERE E.average_rating BETWEEN 2 AND 2.99',
+            '3-3.99': 'WHERE E.average_rating BETWEEN 3 AND 3.99',
+            '4-4.99': 'WHERE E.average_rating BETWEEN 4 AND 4.99',
+            '5': 'WHERE E.average_rating = 5'
+        }
+        query += f" {filter_query.get(filter_by, '')}"
+
+    # Apply sorting based on the specified sort parameter
+    if sort_by:
+        sort_query = {
+            'name_asc': 'ORDER BY E.establishment_name ASC',
+            'name_desc': 'ORDER BY E.establishment_name DESC',
+            'rating_asc': 'ORDER BY E.average_rating ASC',
+            'rating_desc': 'ORDER BY E.average_rating DESC'
+        }
+        query += f" {sort_query.get(sort_by, '')}"
+
+    # Execute the final SQL query
+    cursor.execute(query)
+    # Fetch all the results from the executed query
     establishments = cursor.fetchall()
+    # Close database connection
     connection.close()
 
+    # Render the 'ViewEst.html' template with the retrieved establishments data
     return render_template("ViewEst.html", establishments=establishments)
 
 
