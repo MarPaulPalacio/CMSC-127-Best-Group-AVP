@@ -15,24 +15,27 @@
         <!-- Search bar -->
         <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
 
-        <!-- Dropdown sorting -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Sort by Name or Rating</option>
-            <option value="">Sort by Name (Ascending)</option>
-            <option value="">Sort by Name (Descending)</option>
-            <option value="">Sort by Rating (Ascending)</option>
-            <option value="">Sort by Rating (Descending)</option>
-        </select>
+        <!-- Form for sorting and filtering -->
+        <form method="GET" action="{{ url_for('view_food') }}" class="flex space-x-4">
+            <!-- Dropdown sorting -->
+            <select name="sort" class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;" onchange="this.form.submit()">
+                <option value="" disabled selected>Sort by Name or Rating</option>
+                <option value="name_asc">Sort by Name (Ascending)</option>
+                <option value="name_desc">Sort by Name (Descending)</option>
+                <option value="rating_asc">Sort by Rating (Ascending)</option>
+                <option value="rating_desc">Sort by Rating (Descending)</option>
+            </select>
 
-        <!-- Dropdown filter -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Filter by Food Type</option>
-            <option value="meat">Meat</option>
-            <option value="vegetable">Vegetable</option>
-            <option value="seafood">Seafood</option>
-            <option value="dessert">Dessert</option>
-            <option value="beverage">Beverage</option>
-        </select>
+            <!-- Dropdown filter -->
+            <select name="filter" class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;" onchange="this.form.submit()">
+                <option value="" disabled selected>Filter by Food Type</option>
+                <option value="meat">Meat</option>
+                <option value="vegetable">Vegetable</option>
+                <option value="seafood">Seafood</option>
+                <option value="dessert">Dessert</option>
+                <option value="beverage">Beverage</option>
+            </select>
+        </form>
     </div>
 
     <!-- Main content -->

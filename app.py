@@ -446,10 +446,9 @@ def view_est():
     cursor.execute(query)
     # Fetch all the results from the executed query
     establishments = cursor.fetchall()
-    # Close database connection
+    # Close database
     connection.close()
 
-    # Render the 'ViewEst.html' template with the retrieved establishments data
     return render_template("ViewEst.html", establishments=establishments)
 
 
@@ -788,34 +787,53 @@ def view_establishment_reviews(establishment_id):
 
 @app.route('/customer/food-list', methods=['GET'])
 def view_food():
-
     # Check if user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
+    
+    # Retrieve sorting and filtering parameters from the request URL
+    sort_by = request.args.get('sort')
+    filter_by = request.args.get('filter')
 
     # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
 
     # Query to select all food items and their reviews
-    cursor.execute("""
-        SELECT F.food_id, F.food_name, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
+    query = """
+        SELECT F.food_id, F.foodname, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
         FROM FOOD F
         LEFT JOIN (
             SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
             FROM FOOD_REVIEW
             GROUP BY food_id
         ) FR ON F.food_id = FR.food_id
-    """)
+    """
 
-    # Fetch all rows from the executed query
+    # Apply filtering based on food type if a filter is specified
+    if filter_by:
+        query += f" WHERE F.food_type = '{filter_by.capitalize()}'"
+
+    # Apply sorting based on the specified sort parameter
+    if sort_by:
+        sort_query = {
+            'name_asc': 'ORDER BY F.foodname ASC',
+            'name_desc': 'ORDER BY F.foodname DESC',
+            'rating_asc': 'ORDER BY F.average_rating ASC NULLS LAST',
+            'rating_desc': 'ORDER BY F.average_rating DESC NULLS LAST'
+        }
+        query += f" {sort_query.get(sort_by, '')}"
+
+    # Execute the final SQL query
+    cursor.execute(query)
+    # Fetch all the results from the executed query
     food_items = cursor.fetchall()
-    # Close the database connection
+    # Close database connection
     connection.close()
 
-    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
-    
+    return render_template("ViewFood.html", food_items=food_items)
+
 # Add food review
 @app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
 def review_food(food_id):
