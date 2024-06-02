@@ -1,3 +1,4 @@
+import datetime
 from flask import *
 import bcrypt
 import psycopg2
@@ -29,7 +30,7 @@ p = "5432"
 db_n = "project_db"
 
 # LOCAL Construct the connection string
-onnection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
+connection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
 
 # Function to create tables
 def create_tables():
@@ -243,17 +244,35 @@ def login():
 def logout():
     # Remove user_id from session
     session.pop('user_id', None)
-    return redirect(url_for('login'))  # Redirect to homepage or any other desired page
+    return redirect(url_for('index'))  # Redirect to homepage or any other desired page
 
 # See all user accounts (Read)
 @app.route('/admin/user-list', methods=['GET'])
 def see_users():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+    
+    # Get user ID from the session
+    user_id = session['user_id']
+
+    # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT")
-    users = cursor.fetchall()
-    connection.close()
-    return render_template("UserList.html", users=users)
+
+    # Fetch the user type
+    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+    user_type = cursor.fetchone()[0]
+
+    # If the user is admin, continue
+    if user_type == 'admin':    
+        cursor.execute("SELECT user_id, username, email, user_type, firstname, middlename, lastname FROM ACCOUNT")
+        users = cursor.fetchall()
+        connection.close()
+        return render_template("UserList.html", users=users)
+    else:
+        return redirect(url_for('unauth'))
 
 # Update user account
 @app.route('/admin/edit-user/<int:user_id>', methods=['GET', 'POST'])
@@ -379,35 +398,26 @@ def see_est():
 # Read food establishment as Customer
 @app.route('/customer/establishment-list', methods=['GET'])
 def view_est():
-    # Check if user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-    
-    # Get user ID from the session
-    user_id = session['user_id']
 
-    # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-
-    # Fetch the user type
-    cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
-    user_type = cursor.fetchone()[0]
-
-    # If the user is not a customer or owner, redirect to admin view
-    # if user_type == 'admin':
-    #     return redirect(url_for('see_est'))
-    
-    # Fetch all establishments for viewing
-    cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+    cursor.execute("""
+        SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
+        FROM ESTABLISHMENT E
+        LEFT JOIN (
+            SELECT establishment_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', establishment_review, 'datetime', review_datetime)) AS reviews
+            FROM ESTABLISHMENT_REVIEW
+            GROUP BY establishment_id
+        ) RE ON E.establishment_id = RE.establishment_id
+    """)
     establishments = cursor.fetchall()
-
-    # Close the connection
     connection.close()
 
-    # Render the template with the establishments
     return render_template("ViewEst.html", establishments=establishments)
+
 
 # Update food establishment
 @app.route('/admin/edit-establishment/<int:establishment_id>', methods=['GET', 'POST'])
@@ -440,7 +450,7 @@ def edit_est(establishment_id):
 def delete_est(establishment_id):
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = %s", (establishment_id,))
+    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = %s", (establishment_id))
     connection.commit()
     connection.close()
     return redirect(url_for('see_est'))
@@ -626,7 +636,7 @@ def edit_fd(food_id):
         foodname = request.form['foodname']
         price = request.form['price']
         food_type = request.form['food_type']
-        est_id = request.form['est']
+        est_id = request.form['est_id']
         # Create connection to database
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
@@ -649,6 +659,413 @@ def delete_fd(food_id):
     connection.commit()
     connection.close()
     return redirect(url_for('see_fd'))
+
+
+# Add establishment review
+@app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
+def review_establishment(establishment_id):
+    
+    # If the request method is GET, render the review form
+    if request.method == 'GET':
+        return render_template('ReviewEstablishment.html', establishment_id=establishment_id)
+    # If the request method is POST, handle form submission
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+        
+        # Check if user is logged in
+        if 'user_id' not in session:
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
+
+        user_id = session['user_id']
+
+        # Connect to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        
+        # Insert review into the database
+        add_review_sql = """
+        INSERT INTO ESTABLISHMENT_REVIEW (user_id, establishment_id, rating, establishment_review, review_datetime)
+        VALUES (%s, %s, %s, %s, NOW())
+        """
+        # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table.
+        cursor.execute(add_review_sql, (user_id, establishment_id, rating, review))
+        # Save Changes
+        connection.commit()
+        
+        # Update average rating of the establishment
+        update_avg_rating_sql = """
+        UPDATE ESTABLISHMENT
+        SET average_rating = (
+            SELECT AVG(rating) FROM ESTABLISHMENT_REVIEW WHERE establishment_id = %s
+        )
+        WHERE establishment_id = %s
+        """
+
+        # Execute the SQL query to update the average rating
+        cursor.execute(update_avg_rating_sql, (establishment_id, establishment_id))
+        # Save Changes
+        connection.commit()
+        
+        # Close the database connection
+        connection.close()
+        
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('view_est'))
+
+# Add establishment review
+@app.route('/customer/review-establishment/<int:review_id>/<int:establishment_id>', methods=['GET', 'POST'])
+def update_review_establishment(review_id, establishment_id):
+    
+    # If the request method is GET, render the review form
+    if request.method == 'GET':
+        return render_template('UpdateReviewEstablishment.html', review_id=review_id, establishment_id = establishment_id)
+    # If the request method is POST, handle form submission
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+        
+
+        print(request.form)
+        # Connect to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        
+        # Insert review into the database
+        update_review_sql = """
+    UPDATE ESTABLISHMENT_REVIEW
+        SET rating = %s, establishment_review = %s
+        WHERE review_id = %s;
+        """
+        # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table.
+        cursor.execute(update_review_sql, (rating, review, review_id))
+        # Save Changes
+        connection.commit()
+        
+        # Update average rating of the establishment
+        update_avg_rating_sql = """
+        UPDATE ESTABLISHMENT
+        SET average_rating = (
+            SELECT AVG(rating) FROM ESTABLISHMENT_REVIEW WHERE establishment_id = %s
+        )
+        WHERE establishment_id = %s
+        """
+
+        # Execute the SQL query to update the average rating
+        cursor.execute(update_avg_rating_sql, (establishment_id, establishment_id))
+        # Save Changes
+        connection.commit()
+        
+        # Close the database connection
+        connection.close()
+        
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('view_est'))
+
+# See all review for an establishment   
+@app.route('/customer/establishment-reviews/<int:establishment_id>', methods=['GET'])
+def view_establishment_reviews(establishment_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+
+
+
+    # Query to get the establishment name
+    establishment_name_query = "SELECT establishment_name FROM ESTABLISHMENT WHERE establishment_id = %s"
+    cursor.execute(establishment_name_query, (establishment_id,))
+    establishment_name = cursor.fetchone()
+
+    # If the establishment is found, retrieve the name
+    if establishment_name:
+        establishment_name = establishment_name[0]
+    else:
+        flash("Establishment not found.", "error")
+        return redirect(url_for('view_est'))
+
+    # Query to select all establishment reviews for the specific establishment
+    select_reviews_query = """
+    SELECT er.rating, er.establishment_review, er.review_datetime
+    FROM ESTABLISHMENT_REVIEW er
+    WHERE er.establishment_id = %s 
+    """
+
+    # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
+    cursor.execute(select_reviews_query, (establishment_id,))
+    establishment_reviews = cursor.fetchall()
+
+    # Close the database connection
+    connection.close()
+
+    return render_template('ViewEstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name, establishment_id = establishment_id)
+
+@app.route('/customer/establishment-reviews/user/<int:establishment_id>', methods=['GET'])
+def view_establishment_reviews_user(establishment_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    # Query to get the establishment name
+    establishment_name_query = "SELECT establishment_name FROM ESTABLISHMENT WHERE establishment_id = %s"
+    cursor.execute(establishment_name_query, (establishment_id,))
+    establishment_name = cursor.fetchone()
+
+    # If the establishment is found, retrieve the name
+    if establishment_name:
+        establishment_name = establishment_name[0]
+    else:
+        flash("Establishment not found.", "error")
+        return redirect(url_for('view_est'))
+
+    # Query to select all establishment reviews for the specific establishment
+    select_reviews_query = """
+    SELECT er.rating, er.establishment_review, er.review_datetime, er.review_id
+    FROM ESTABLISHMENT_REVIEW er
+    WHERE er.establishment_id = %s
+    and
+    er.user_id = %s
+    """
+
+    # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
+    cursor.execute(select_reviews_query, (establishment_id, user_id))
+    establishment_reviews = cursor.fetchall()
+
+    # Close the database connection
+    connection.close()
+
+    return render_template('ViewEstablishmentReviewsUser.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name, establishment_id = establishment_id)
+
+
+@app.route('/customer/delete-review/<int:review_id>', methods=['POST'])
+def delete_establishment_review(review_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+
+    cursor.execute("DELETE FROM ESTABLISHMENT_REVIEW WHERE review_id = %s", (review_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('view_est'))
+
+@app.route('/customer/food-list', methods=['GET'])
+def view_food():
+
+    # Check if user is logged in
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+
+    # Connect to the database
+    user_id=session['user_id']
+    print(user_id)
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    
+
+    # Query to select all food items and their reviews
+    cursor.execute("""
+        SELECT F.food_id, F.food_name, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
+        FROM FOOD F
+        LEFT JOIN (
+            SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
+            FROM FOOD_REVIEW
+            GROUP BY food_id
+        ) FR ON F.food_id = FR.food_id
+    """)
+
+    # Fetch all rows from the executed query
+    food_items = cursor.fetchall()
+    # Close the database connection
+    connection.close()
+
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
+    
+# Add food review
+@app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
+def review_food(food_id):
+
+    # If the request method is GET, render the review form
+    if request.method == 'GET':
+        return render_template('ReviewFood.html', food_id=food_id)
+    # If the request method is POST, handle form submission
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+        
+        # Check if user is logged in
+        if 'user_id' not in session:
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
+
+        user_id = session['user_id']
+
+        # Connect to the connection
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        
+        # Insert review into the database
+        add_review_sql = """
+        INSERT INTO FOOD_REVIEW (user_id, food_id, rating, food_review, review_datetime)
+        VALUES (%s, %s, %s, %s, NOW())
+        """
+        # Execute the SQL query to add a review for a food item into the database and save changes
+        cursor.execute(add_review_sql, (user_id, food_id, rating, review))
+        connection.commit()
+        
+        # Update average rating of the food item
+        update_avg_rating_sql = """
+        UPDATE FOOD
+        SET average_rating = (
+            SELECT AVG(rating) FROM FOOD_REVIEW WHERE food_id = %s
+        )
+        WHERE food_id = %s
+        """
+
+        # Execute the SQL query to update the average rating and save changes
+        cursor.execute(update_avg_rating_sql, (food_id, food_id))
+        connection.commit()
+        
+        # Close the connection to the database
+        connection.close()
+        
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('view_food'))
+    
+@app.route('/customer/update/review-food/<int:review_id>/<int:food_id>', methods=['GET', 'POST'])
+def update_review_food(review_id, food_id):
+    if request.method == 'GET':
+        return render_template('UpdateReviewFood.html', review_id=review_id, food_id=food_id)
+    
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+
+        try:
+            with psycopg2.connect(supabase_connection_string) as connection:
+                with connection.cursor() as cursor:
+                    update_review_sql = """
+                    UPDATE FOOD_REVIEW
+                    SET rating = %s, food_review = %s
+                    WHERE review_id = %s;
+                    """
+                    cursor.execute(update_review_sql, (rating, review, review_id))
+
+                    update_avg_rating_sql = """
+                    UPDATE FOOD
+                    SET average_rating = (
+                        SELECT AVG(rating) FROM FOOD_REVIEW WHERE food_id = %s
+                    )
+                    WHERE food_id = %s
+                    """
+                    cursor.execute(update_avg_rating_sql, (food_id, food_id))
+            
+            flash("Review submitted successfully!", "success")
+            return redirect(url_for('view_food'))
+        
+        except Exception as e:
+            flash(f"An error occurred: {e}", "error")
+            return redirect(url_for('update_review_food', review_id=review_id, food_id=food_id))
+
+# See all review for a food
+@app.route('/customer/food-reviews/users/<int:food_id>', methods=['GET'])
+def view_food_reviews_user(food_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    
+
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    # Query to get the food name
+    food_name_query = "SELECT food.foodname FROM FOOD WHERE food_id = %s"
+    cursor.execute(food_name_query, (food_id,))
+    food_name = cursor.fetchone()
+
+    
+
+    # If the food item is found, retrieve the name
+    if food_name:
+        food_name = food_name[0]
+    else:
+        flash("Food item not found.", "error")
+        return redirect(url_for('view_food'))
+
+    # Query to select all food reviews for the specific food item
+    select_reviews_query = """
+    SELECT fr.rating, fr.food_review, fr.review_datetime, fr.review_id
+    FROM FOOD_REVIEW fr
+    WHERE fr.food_id = %s and fr.user_id = %s
+    """
+    # Execute the SQL query to select all food reviews for the specific food item
+    cursor.execute(select_reviews_query, (food_id, user_id))
+    # Fetch all the selected food reviews
+    food_reviews = cursor.fetchall()
+
+    # Close the connection to the database
+    connection.close()
+
+    return render_template('ViewFoodReviewsUser.html', food_reviews=food_reviews, food_name=food_name, food_id = food_id)
+
+@app.route('/customer/food-reviews/<int:food_id>', methods=['GET'])
+def view_food_reviews(food_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Query to get the food name
+    food_name_query = "SELECT food.foodname FROM FOOD WHERE food_id = %s"
+    cursor.execute(food_name_query, (food_id,))
+    food_name = cursor.fetchone()
+
+    # If the food item is found, retrieve the name
+    if food_name:
+        food_name = food_name[0]
+    else:
+        flash("Food item not found.", "error")
+        return redirect(url_for('view_food'))
+
+    # Query to select all food reviews for the specific food item
+    select_reviews_query = """
+    SELECT fr.rating, fr.food_review, fr.review_datetime, fr.review_id
+    FROM FOOD_REVIEW fr
+    WHERE fr.food_id = %s
+    """
+    # Execute the SQL query to select all food reviews for the specific food item
+    cursor.execute(select_reviews_query, (food_id,))
+    # Fetch all the selected food reviews
+    food_reviews = cursor.fetchall()
+
+    # Close the connection to the database
+    connection.close()
+
+    return render_template('ViewFoodReviews.html', food_reviews=food_reviews, food_name=food_name, food_id = food_id)
+
+
+@app.route('/customer/delete-review/<int:review_id>', methods=['POST'])
+def delete_food_review(review_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+
+    cursor.execute("DELETE FROM FOOD_REVIEW WHERE review_id = %s", (review_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('view_food'))
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=3002)
