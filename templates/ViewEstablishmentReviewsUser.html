@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Establishment Reviews</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex flex-col mt-24 items-center h-screen bg-gray-100">
+    <!-- Include the navigation bar -->
+    {% include 'CustomerNav.html' %}
+
+    <!-- Include subnav bar -->
+
+    {%include 'ViewEstablishmentReviewsNavBar.html'%}
+    
+    <!-- Main content -->
+    <div class="w-full max-w-4xl mb-8 mt-30">
+        <h1 class="text-2xl font-bold mb-4">Reviews for {{ establishment_name }}</h1>
+
+        <!-- If there a review in establishment -->
+        {% if establishment_reviews %}
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <ul>
+                <!-- View all review in an establisment -->
+                {% for review in establishment_reviews %}
+                <li class="flex flex-col mb-4 border-b pb-2">
+                    <p class="text-gray-600">Rating: {{ review[0] }}</p>
+                    <p class="text-gray-600">{{ review[1] }}</p>
+                    <p class="text-gray-400 text-sm">{{ review[2] }}</p>
+                    <div class = "py-2 px-4 border-b flex space-x-2 justify-center">
+                        <form action="{{ url_for('delete_establishment_review', review_id = review[3],)}}" method="post">
+                            <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" type="submit">Delete</button>
+                        </form>
+                        <form action="{{ url_for('update_review_establishment', review_id = review[3], establishment_id=establishment_id,)}}" method="get">
+                            <button class="bg-yellow-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" type="submit">Update</button>
+                        </form>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        <!-- If there is no review in establishment -->
+        {% else %}
+        <p class="text-lg font-bold text-gray-600">No reviews available for this establishment.</p>
+        {% endif %}
+    </div>
+</body>
+</html>
