@@ -574,7 +574,7 @@ def add_fd():
             return redirect(url_for('see_fd'))
 
 # Read food item as admin/owner
-@app.route('/admin/food-list', methods=['GET'])
+@app.route('/admin/food-list', methods=['GET', 'POST'])
 def see_fd():
     #Check if the user is logged in
     if 'user_id' not in session:
@@ -591,33 +591,74 @@ def see_fd():
     # Check the user type
     cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
     user_type = cursor.fetchone()[0]
+    if request.method == 'GET':
+        # Fetch food items based on user type
+        if user_type == 'admin':
+            cursor.execute("""
+                SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+                FROM FOOD
+                JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+            """)
+        elif user_type == 'owner':
+            cursor.execute("""
+                SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+                FROM FOOD
+                JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+                WHERE FOOD.creator_id = %s
+            """, (user_id,))
+        else:
+            connection.close()
+            return redirect(url_for('unauth'))
+        
+        # Fetch food items
+        food_items = cursor.fetchall()
 
-    # Fetch food items based on user type
-    if user_type == 'admin':
-        cursor.execute("""
-            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-            FROM FOOD
-            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-        """)
-    elif user_type == 'owner':
-        cursor.execute("""
-            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-            FROM FOOD
-            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-            WHERE FOOD.creator_id = %s
-        """, (user_id,))
-    else:
+        # Close the connection 
         connection.close()
-        return redirect(url_for('unauth'))
-    
-    # Fetch food items
-    food_items = cursor.fetchall()
 
-    # Close the connection 
-    connection.close()
+        # Render the template with the food items
+        return render_template("FoodList.html", food_items=food_items)
+    elif request.method == 'POST':
+        spl_word = '-'
+        food_search = request.form.get('food_search')
+        price_range = request.form.get('price_range')
+        food_type = request.form.get('type')
+        print("Price range is:" + price_range)
+        
 
-    # Render the template with the food items
-    return render_template("FoodList.html", food_items=food_items)
+        if user_type == 'admin':
+            query_params = [f"%{food_search}%"]
+        
+            # Building dynamic query based on provided filters
+            food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
+                             FROM FOOD 
+                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
+                             WHERE FOOD.foodname ILIKE %s"""
+        else:
+            query_params = [f"%{food_search}%", user_id]
+        
+            # Building dynamic query based on provided filters
+            food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
+                             FROM FOOD 
+                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
+                             WHERE FOOD.foodname ILIKE %s and FOOD.creator_id = %s"""           
+        
+        if price_range != "none":
+            min_price, max_price = map(int, price_range.split(spl_word))
+            food_name_query += " AND price BETWEEN %s AND %s"
+            query_params.extend([min_price, max_price])
+        
+        if food_type != "none":
+            food_name_query += " AND FOOD.food_type = %s"
+            query_params.append(food_type)
+        
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(food_name_query, query_params)
+                food_items = cursor.fetchall()
+
+        return render_template('FoodList.html', food_items=food_items, show_establishment_name=True)
 
 # Read food item as customer
 @app.route('/customer/food-list', methods=['GET', 'POST'])
