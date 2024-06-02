@@ -396,27 +396,48 @@ def see_est():
     return render_template("EstList.html", establishments=establishments)
 
 # Read food establishment as Customer
-@app.route('/customer/establishment-list', methods=['GET'])
+@app.route('/customer/establishment-list', methods=['GET', 'POST'])
 def view_est():
+
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
+        
+    if request.method == 'GET':
 
-    connection = psycopg2.connect(supabase_connection_string)
-    cursor = connection.cursor()
-    cursor.execute("""
-        SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
-        FROM ESTABLISHMENT E
-        LEFT JOIN (
-            SELECT establishment_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', establishment_review, 'datetime', review_datetime)) AS reviews
-            FROM ESTABLISHMENT_REVIEW
-            GROUP BY establishment_id
-        ) RE ON E.establishment_id = RE.establishment_id
-    """)
-    establishments = cursor.fetchall()
-    connection.close()
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
+            FROM ESTABLISHMENT E
+            LEFT JOIN (
+                SELECT establishment_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', establishment_review, 'datetime', review_datetime)) AS reviews
+                FROM ESTABLISHMENT_REVIEW
+                GROUP BY establishment_id
+            ) RE ON E.establishment_id = RE.establishment_id
+        """)
+        establishments = cursor.fetchall()
+        connection.close()
 
-    return render_template("ViewEst.html", establishments=establishments)
+        return render_template("ViewEst.html", establishments=establishments)
+    elif request.method=='POST':
+        est_search = request.form.get('est_search')
+        
+        query_params = [f"%{est_search}%"]
+        
+        # Building dynamic query based on provided filters
+        est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
+            FROM ESTABLISHMENT E
+            where E.establishment_name ILIKE %s"""
+        
+        
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(est_name_query, query_params)
+                establishments = cursor.fetchall()
+
+        return render_template('ViewEst.html', establishments=establishments)
 
 
 # Update food establishment
