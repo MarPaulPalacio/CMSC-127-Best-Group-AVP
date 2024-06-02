@@ -359,14 +359,12 @@ def add_est():
             return redirect(url_for('see_est'))
 
 # Read food establishment as Owner/Admin
-@app.route('/admin/establishment-list', methods=['GET'])
+@app.route('/admin/establishment-list', methods=['GET', 'POST'])
 def see_est():
     # Check if the user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-
-    # Get the user ID from the session
     user_id = session['user_id']
 
     # Open a connection to the database
@@ -377,23 +375,60 @@ def see_est():
     cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
     user_type = cursor.fetchone()[0]
 
-    # Fetch establishments based on user type
-    if user_type == 'admin':
-        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
-    elif user_type == 'owner':
-        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
-    else:
+    if request.method =='GET':
+        # Get the user ID from the session
+        user_id = session['user_id']
+
+        # Open a connection to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Check the user type
+        cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+        user_type = cursor.fetchone()[0]
+
+        # Fetch establishments based on user type
+        if user_type == 'admin':
+            cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+        elif user_type == 'owner':
+            cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+        else:
+            connection.close()
+            return redirect(url_for('unauth'))
+
+        # Fetch establishments
+        establishments = cursor.fetchall()
+
+        # Close the connection
         connection.close()
-        return redirect(url_for('unauth'))
 
-    # Fetch establishments
-    establishments = cursor.fetchall()
+        # Render the template with the establishments
+        return render_template("EstList.html", establishments=establishments)
+    elif request.method == 'POST':
+        est_search = request.form.get('est_search')
+        est_address = request.form.get('est_address')
 
-    # Close the connection
-    connection.close()
+        if user_type == 'admin':
+            query_params = [f"%{est_search}%", f"{est_address}%"]
+            est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
+                FROM ESTABLISHMENT E
+                WHERE E.establishment_name ILIKE %s and E.address_location ILIKE %s"""
+        elif user_type == 'owner':
+            query_params = [f"%{est_search}%", user_id, f"{est_address}%"]
+            est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
+                FROM ESTABLISHMENT E
+                WHERE E.establishment_name ILIKE %s AND E.owner_id = %s and E.address_location ILIKE %s"""
+        else:
+            connection.close()
+            return redirect(url_for('unauth'))
 
-    # Render the template with the establishments
-    return render_template("EstList.html", establishments=establishments)
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(est_name_query, query_params)
+                establishments = cursor.fetchall()
+
+        return render_template('EstList.html', establishments=establishments)
 
 # Read food establishment as Customer
 @app.route('/customer/establishment-list', methods=['GET', 'POST'])
@@ -422,13 +457,14 @@ def view_est():
         return render_template("ViewEst.html", establishments=establishments)
     elif request.method=='POST':
         est_search = request.form.get('est_search')
-        
-        query_params = [f"%{est_search}%"]
+        est_address = request.form.get('est_address')
+
+        query_params = [f"%{est_search}%", f"{est_address}%"]
         
         # Building dynamic query based on provided filters
         est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
             FROM ESTABLISHMENT E
-            where E.establishment_name ILIKE %s"""
+            where E.establishment_name ILIKE %s AND E.address_location ILIKE %s"""
         
         
         # Connect to the database
@@ -471,7 +507,7 @@ def edit_est(establishment_id):
 def delete_est(establishment_id):
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
-    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = %s", (establishment_id))
+    cursor.execute("DELETE FROM ESTABLISHMENT WHERE establishment_id = %s", (establishment_id,))
     connection.commit()
     connection.close()
     return redirect(url_for('see_est'))
