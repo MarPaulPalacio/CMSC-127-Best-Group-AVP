@@ -565,11 +565,13 @@ def see_fd():
 # Read food item as customer
 @app.route('/customer/food-list', methods=['GET', 'POST'])
 def view_all_fd():
-    if request.method == 'GET':
         # Check if user is logged in
-        if 'user_id' not in session:
-            flash("You need to login first.", "error")
-            return redirect(url_for('login'))
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+        
+    if request.method == 'GET':
+
         
         
         # Open a connection to the database
@@ -591,20 +593,36 @@ def view_all_fd():
         return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
 
     elif request.method =='POST':
+        spl_word = '-'
         food_search = request.form.get('food_search')
+        price_range = request.form.get('price_range')
+        food_type = request.form.get('type')
+        print("Price range is:" + price_range)
+        
+        query_params = [f"%{food_search}%"]
+        
+        # Building dynamic query based on provided filters
+        food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
+                             FROM FOOD 
+                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
+                             WHERE foodname ILIKE %s"""
+        
+        if price_range != "none":
+            min_price, max_price = map(int, price_range.split(spl_word))
+            food_name_query += " AND price BETWEEN %s AND %s"
+            query_params.extend([min_price, max_price])
+        
+        if food_type != "none":
+            food_name_query += " AND FOOD.food_type = %s"
+            query_params.append(food_type)
+        
         # Connect to the database
-        connection = psycopg2.connect(supabase_connection_string)
-        cursor = connection.cursor()
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(food_name_query, query_params)
+                food_items = cursor.fetchall()
 
-        # Query to get the food name
-        food_name_query = "SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name FROM FOOD JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id WHERE foodname ILIKE %s"
-        cursor.execute(food_name_query, (f"%{food_search}%",))
-        food_items = cursor.fetchall()
-
-        # Close the connection to the database
-        connection.close()
-
-        return render_template('ViewFood.html',food_items = food_items, show_establishment_name=True)
+        return render_template('ViewFood.html', food_items=food_items, show_establishment_name=True)
 
 # Read food items of an establishment as a Customer
 @app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
