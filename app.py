@@ -602,24 +602,47 @@ def view_all_fd():
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-    
-    # Open a connection to the database
+    # Retrieve sorting and filtering parameters from the request URL
+    sort_by = request.args.get('sort')
+    filter_by = request.args.get('filter')
+
+    # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
 
-    # Fetch all food items with establishment names
-    cursor.execute("""
-        SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-        FROM FOOD
-        JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-    """)
-    food_items = cursor.fetchall()
+    # Query to select all food items and their reviews
+    query = """
+        SELECT F.food_id, F.foodname, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
+        FROM FOOD F
+        LEFT JOIN (
+            SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
+            FROM FOOD_REVIEW
+            GROUP BY food_id
+        ) FR ON F.food_id = FR.food_id
+    """
 
-    # Close the connection
+    # Apply filtering based on food type if a filter is specified
+    if filter_by:
+        query += f" WHERE F.food_type = '{filter_by.capitalize()}'"
+
+    # Apply sorting based on the specified sort parameter
+    if sort_by:
+        sort_query = {
+            'name_asc': 'ORDER BY F.foodname ASC',
+            'name_desc': 'ORDER BY F.foodname DESC',
+            'rating_asc': 'ORDER BY F.average_rating ASC NULLS LAST',
+            'rating_desc': 'ORDER BY F.average_rating DESC NULLS LAST'
+        }
+        query += f" {sort_query.get(sort_by, '')}"
+
+    # Execute the final SQL query
+    cursor.execute(query)
+    # Fetch all the results from the executed query
+    food_items = cursor.fetchall()
+    # Close database connection
     connection.close()
 
-    # Render the template with the food items and show_establishment_name variable set to True
-    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name = True)
 
 # Read food items of an establishment as a Customer
 @app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
@@ -791,7 +814,6 @@ def view_food():
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-    
     # Retrieve sorting and filtering parameters from the request URL
     sort_by = request.args.get('sort')
     filter_by = request.args.get('filter')
