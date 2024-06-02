@@ -563,30 +563,48 @@ def see_fd():
     return render_template("FoodList.html", food_items=food_items)
 
 # Read food item as customer
-@app.route('/customer/food-list', methods=['GET'])
+@app.route('/customer/food-list', methods=['GET', 'POST'])
 def view_all_fd():
-    # Check if user is logged in
-    if 'user_id' not in session:
-        flash("You need to login first.", "error")
-        return redirect(url_for('login'))
-    
-    # Open a connection to the database
-    connection = psycopg2.connect(supabase_connection_string)
-    cursor = connection.cursor()
+    if request.method == 'GET':
+        # Check if user is logged in
+        if 'user_id' not in session:
+            flash("You need to login first.", "error")
+            return redirect(url_for('login'))
+        
+        
+        # Open a connection to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
 
-    # Fetch all food items with establishment names
-    cursor.execute("""
-        SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-        FROM FOOD
-        JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-    """)
-    food_items = cursor.fetchall()
+        # Fetch all food items with establishment names
+        cursor.execute("""
+            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+            FROM FOOD
+            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+        """)
+        food_items = cursor.fetchall()
 
-    # Close the connection
-    connection.close()
+        # Close the connection
+        connection.close()
 
-    # Render the template with the food items and show_establishment_name variable set to True
-    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
+        # Render the template with the food items and show_establishment_name variable set to True
+        return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
+
+    elif request.method =='POST':
+        food_search = request.form.get('food_search')
+        # Connect to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Query to get the food name
+        food_name_query = "SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name FROM FOOD JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id WHERE foodname ILIKE %s"
+        cursor.execute(food_name_query, (f"%{food_search}%",))
+        food_items = cursor.fetchall()
+
+        # Close the connection to the database
+        connection.close()
+
+        return render_template('ViewFood.html',food_items = food_items, show_establishment_name=True)
 
 # Read food items of an establishment as a Customer
 @app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
@@ -660,7 +678,7 @@ def delete_fd(food_id):
     connection.close()
     return redirect(url_for('see_fd'))
 
-
+##############################################################################################################################################################              ESTABLISHMENT REVIEWS
 # Add establishment review
 @app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
 def review_establishment(establishment_id):
@@ -927,7 +945,11 @@ def view_food():
     connection.close()
 
     return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
-    
+
+
+##############################################################################################################################################################              FOOD REVIEWS
+
+
 # Add food review
 @app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
 def review_food(food_id):
@@ -1105,6 +1127,7 @@ def view_food_reviews_month(food_id):
 @app.route('/customer/food-reviews/<int:food_id>', methods=['GET'])
 def view_food_reviews(food_id):
 
+    
     # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
@@ -1150,7 +1173,5 @@ def delete_food_review(review_id):
     return redirect(url_for('view_food'))
 
 
-
-
 if __name__ == "__main__":
-    app.run(debug=True, port=3002)
+    app.run(debug=True, port=3002)  

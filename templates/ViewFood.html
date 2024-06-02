@@ -13,7 +13,12 @@
     <!-- Toolbar header -->
     <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
         <!-- Search bar -->
-        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+        <form action="{{ url_for('view_all_fd') }}" method="post" class="bg-white shadow-md rounded-lg p-6">
+            <input class="px-3 py-2 border rounded-md" type="text" id="food_search" name="food_search" placeholder="Search by name">
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Search
+            </button>
+        </form>
 
         <!-- Dropdown sorting -->
         <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
@@ -49,6 +54,7 @@
                         <p class="text-gray-600 mb-1">Price: {{ food_item[2] }}</p>
                         <p class="text-gray-600 mb-1">Type: {{ food_item[3] }}</p>
                         <p class="text-gray-600">Average Rating: {{ food_item[4] }}</p>
+                        <p class="text-gray-600">Establishment: {{ food_item[5] }}</p>
 
                         <!-- Link to go to Review Food or View Food Reviews routes -->
                         <a href="{{ url_for('review_food', food_id=food_item[0]) }}" class="text-blue-500 underline">Review this Food Item</a>
@@ -59,7 +65,7 @@
                 {% endfor %}
             {% else %}
                 <div class="flex w-full items-center justify-center">
-                    <p class="text-lg font-bold text-gray-600 text-center">This establishment has no food.</p>
+                    <p class="text-lg font-bold text-gray-600 text-center">No food items found.</p>
                 </div>
             {% endif %}
         </div>
