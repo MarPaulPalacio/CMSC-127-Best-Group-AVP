@@ -26,12 +26,12 @@
 
         <!-- Dropdown filter -->
         <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Filter by Rating</option>
-            <option value="">1-1.99</option>
-            <option value="">2-2.99</option>
-            <option value="">3-3.99</option>
-            <option value="">4-4.99</option>
-            <option value="">5</option>
+            <option value="" disabled selected>Filter by Food Type</option>
+            <option value="meat">Meat</option>
+            <option value="vegetable">Vegetable</option>
+            <option value="seafood">Seafood</option>
+            <option value="dessert">Dessert</option>
+            <option value="beverage">Beverage</option>
         </select>
     </div>
 
@@ -41,21 +41,27 @@
         
         <!-- Food Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-            {% for food_item in food_items %}
-            <a href="/customer/food-details/{{ food_item[0] }}" class="hover:cursor-pointer">
-                <div class="bg-white shadow-md rounded-lg p-6">
-                    <h2 class="text-lg font-bold mb-2">{{ food_item[1] }}</h2>
-                    <p class="text-gray-600 mb-1">Price: {{ food_item[2] }}</p>
-                    <p class="text-gray-600 mb-1">Type: {{ food_item[3] }}</p>
-                    <p class="text-gray-600">Average Rating: {{ food_item[4] }}</p>
+            {% if food_items %}
+                {% for food_item in food_items %}
+                <a href="/customer/food-details/{{ food_item[0] }}" class="hover:cursor-pointer">
+                    <div class="bg-white shadow-md rounded-lg p-6">
+                        <h2 class="text-lg font-bold mb-2">{{ food_item[1] }}</h2>
+                        <p class="text-gray-600 mb-1">Price: {{ food_item[2] }}</p>
+                        <p class="text-gray-600 mb-1">Type: {{ food_item[3] }}</p>
+                        <p class="text-gray-600">Average Rating: {{ food_item[4] }}</p>
 
-                    <!-- Link to go to Review Food or View Food Reviews routes -->
-                    <a href="{{ url_for('review_food', food_id=food_item[0]) }}" class="text-blue-500 underline">Review this Food Item</a>
-                    <br>
-                    <a href="{{ url_for('view_food_reviews', food_id=food_item[0]) }}" class="text-blue-500 underline">View all reviews</a>
+                        <!-- Link to go to Review Food or View Food Reviews routes -->
+                        <a href="{{ url_for('review_food', food_id=food_item[0]) }}" class="text-blue-500 underline">Review this Food Item</a>
+                        <br>
+                        <a href="{{ url_for('view_food_reviews', food_id=food_item[0]) }}" class="text-blue-500 underline">View all reviews</a>
+                    </div>
+                </a>
+                {% endfor %}
+            {% else %}
+                <div class="flex w-full items-center justify-center">
+                    <p class="text-lg font-bold text-gray-600 text-center">This establishment has no food.</p>
                 </div>
-            </a>
-            {% endfor %}
+            {% endif %}
         </div>
     </div>
 </body>
