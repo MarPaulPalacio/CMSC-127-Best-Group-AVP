@@ -104,19 +104,19 @@ The task for the project team is to design a flexible and realistic database and
     ```bash
     git checkout main
     ```
-3. Run the line below in your terminal to install python dependencies, you should be in the CMSC-127-Best-Group-AVP folder/directory where requirements.txt is located when running this command.
+3. Run the line below in your terminal to install python dependencies, you should be in the `CMSC-127-Best-Group-AVP` folder/directory where requirements.txt is located when running this command.
 
     ```bash
     pip install -r requirements.txt
     ```
 	Note: This is similar to the npm install of React from MERN stack.
-4. Try running the local server of the python flask app by running the line below (still inside the CMSC-127-Best-Group-AVP directory).  
+4. Try running the local server of the python flask app by running the line below (still inside the `CMSC-127-Best-Group-AVP` directory).  
 
     ```bash
     python ./app.py
     ```
 
-Note: You should follow the **Prerequisites** section in this tutorial [Python and Flask Tutorial in Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask) then follow the **Create a project environment for the Flask tutorial**, but instead of doing this in a folder called *hello_flask* do this inside our folder project *CMSC-127-Best-Group-AVP*. 
+Note: You can also follow the **Prerequisites** section in this tutorial [Python and Flask Tutorial in Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask) then follow the **Create a project environment for the Flask tutorial**, but instead of doing this in a folder called `hello_flask` do this inside our folder project `CMSC-127-Best-Group-AVP` to set up the Python environment.
 
 
 ## USER MANUAL
