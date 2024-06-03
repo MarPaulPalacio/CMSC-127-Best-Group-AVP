@@ -14,78 +14,85 @@
 <body class="flex flex-col mt-24 items-center h-screen bg-gray-100">
     <!-- Include the navigation bar -->
     {% include 'OwnerNav.html' %}
+    <div class="flex flex-row w-full">
+        <!-- Tool SideBar -->
+        <div class="w-2/6">
+            <div class="bg-white shadow-md rounded-lg p-6 flex flex-col justify-between fixed items-center ml-12">
+                <!-- Form for searching -->
+                <form action="{{ url_for('see_est') }}" method="post" class="w-full flex flex-col space-y-4">
+                    <!-- Search by name -->
+                    <input class="w-full px-3 py-2 border rounded-md" id="est_search" name="est_search" type="text" placeholder="Search by name">
+                    
+                    <!-- Search by address -->
+                    <input class="w-full px-3 py-2 border rounded-md" id="est_address" name="est_address" type="text" placeholder="Search by Address">
 
-    <!-- Toolbar header -->
-    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
-        <!-- Search bar -->
-        <form action="{{ url_for('see_est') }}" method="post" class="bg-white shadow-md rounded-lg p-6 mr-20 mt-1/2 flex flex-col justify-between h-40">
-            <!-- Search bar -->
-        
-            <input class="px-3 py-2 border rounded-md" id="est_search" name="est_search" type="text" placeholder="Search by name">
+                    <!-- Search Button -->
+                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Search
+                    </button>
+                </form>
 
-            <input class="px-3 py-2 border rounded-md" id="est_address" name="est_address" type="text" placeholder="Search by Address">
+                <!-- Form for sorting and filtering -->
+                <form method="GET" action="{{ url_for('see_est') }}" class="flex flex-col mt-4 space-y-4">
+                    <!-- Dropdown sorting -->
+                    <select name="sort" class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;" onchange="this.form.submit()">
+                        <option value="" disabled selected>Sort by Name or Rating</option>
+                        <option value="name_asc">Sort by Name (Ascending)</option>
+                        <option value="name_desc">Sort by Name (Descending)</option>
+                        <option value="rating_asc">Sort by Rating (Ascending)</option>
+                        <option value="rating_desc">Sort by Rating (Descending)</option>
+                    </select>
 
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-                Search
-            </button>
-        </form>
-        <!-- Dropdown sorting -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Sort by Name or Rating</option>
-            <option value="">Sort by Name (Ascending)</option>
-            <option value="">Sort by Name (Descending)</option>
-            <option value="">Sort by Rating (Ascending)</option>
-            <option value="">Sort by Rating (Descending)</option>
-        </select>
+                    <!-- Dropdown filter -->
+                    <select name="filter" class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;" onchange="this.form.submit()">
+                        <option value="" disabled selected>Filter by Rating</option>
+                        <option value="1-1.99">1-1.99</option>
+                        <option value="2-2.99">2-2.99</option>
+                        <option value="3-3.99">3-3.99</option>
+                        <option value="4-4.99">4-4.99</option>
+                        <option value="5">5</option>
+                    </select>
+                </form>
+                <!-- Add establishment button -->
+                <form action="{{ url_for('add_est') }}" method="get" class="w-full mt-4">
+                    <button class="w-full bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Add Establishment</button>
+                </form>
+            </div>
+        </div>
 
-        <!-- Dropdown filter -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Filter by Rating</option>
-            <option value="">1-1.99</option>
-            <option value="">2-2.99</option>
-            <option value="">3-3.99</option>
-            <option value="">4-4.99</option>
-            <option value="">5</option>
-        </select>
-
-        <!-- Add establishment button -->
-        <form action="{{ url_for('add_est') }}" method="get">
-            <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">Add Establishment</button>
-        </form>
-    </div>
-
-    <!-- Establishment table -->
-    <div class="w-full max-w-6xl">
-        <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
-        <table class="min-w-full bg-white shadow-md rounded">
-            <thead>
-                <tr>
-                    <th class="py-2 px-4 border-b">Establishment ID</th>
-                    <th class="py-2 px-4 border-b">Establishment Name</th>
-                    <th class="py-2 px-4 border-b">Address Location</th>
-                    <th class="py-2 px-4 border-b">Average Rating</th>
-                    <th class="py-2 px-4 border-b">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for establishment in establishments %}
-                <tr>
-                    <td class="py-2 px-4 border-b text-center">{{ establishment[0] }}</td>
-                    <td class="py-2 px-4 border-b text-center">{{ establishment[1] }}</td>
-                    <td class="py-2 px-4 border-b">{{ establishment[2] }}</td>
-                    <td class="py-2 px-4 border-b text-center">{{ establishment[3] }}</td>
-                    <td class="py-2 px-4 border-b flex space-x-2">
-                        <form action="{{ url_for('edit_est', establishment_id=establishment[0]) }}" method="get">
-                            <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded" type="submit">Edit</button>
-                        </form>
-                        <form action="{{ url_for('delete_est', establishment_id=establishment[0]) }}" method="post">
-                            <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" type="submit">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <!-- Establishment table -->
+        <div class="w-5/6 mr-12">
+            <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
+            <table class="min-w-full bg-white shadow-md rounded">
+                <thead>
+                    <tr>
+                        <th class="py-2 px-4 border-b">Establishment ID</th>
+                        <th class="py-2 px-4 border-b">Establishment Name</th>
+                        <th class="py-2 px-4 border-b">Address Location</th>
+                        <th class="py-2 px-4 border-b">Average Rating</th>
+                        <th class="py-2 px-4 border-b">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for establishment in establishments %}
+                    <tr>
+                        <td class="py-2 px-4 border-b text-center">{{ establishment[0] }}</td>
+                        <td class="py-2 px-4 border-b text-center">{{ establishment[1] }}</td>
+                        <td class="py-2 px-4 border-b">{{ establishment[2] }}</td>
+                        <td class="py-2 px-4 border-b text-center">{{ establishment[3] }}</td>
+                        <td class="py-2 px-4 border-b flex space-x-2">
+                            <form action="{{ url_for('edit_est', establishment_id=establishment[0]) }}" method="get">
+                                <button class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-1 px-2 rounded" type="submit">Edit</button>
+                            </form>
+                            <form action="{{ url_for('delete_est', establishment_id=establishment[0]) }}" method="post">
+                                <button class="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded" type="submit">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </body>
 </html>

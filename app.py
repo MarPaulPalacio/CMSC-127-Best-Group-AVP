@@ -375,34 +375,50 @@ def see_est():
     cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
     user_type = cursor.fetchone()[0]
 
-    if request.method =='GET':
-        # Get the user ID from the session
-        user_id = session['user_id']
+    if request.method == 'GET':
+        # Retrieve sorting and filtering parameters from the request URL
+        sort_by = request.args.get('sort')
+        filter_by = request.args.get('filter')
 
-        # Open a connection to the database
-        connection = psycopg2.connect(supabase_connection_string)
-        cursor = connection.cursor()
-
-        # Check the user type
-        cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
-        user_type = cursor.fetchone()[0]
-
-        # Fetch establishments based on user type
+        # Base query to select establishments
         if user_type == 'admin':
-            cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+            query = "SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT"
+            query_params = []
         elif user_type == 'owner':
-            cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+            query = "SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s"
+            query_params = [user_id]
         else:
             connection.close()
             return redirect(url_for('unauth'))
 
-        # Fetch establishments
-        establishments = cursor.fetchall()
+        # Apply filtering based on average rating if a filter is specified
+        if filter_by:
+            filter_query = {
+                '1-1.99': 'AND average_rating BETWEEN 1 AND 1.99',
+                '2-2.99': 'AND average_rating BETWEEN 2 AND 2.99',
+                '3-3.99': 'AND average_rating BETWEEN 3 AND 3.99',
+                '4-4.99': 'AND average_rating BETWEEN 4 AND 4.99',
+                '5': 'AND average_rating = 5'
+            }
+            query += f" {filter_query.get(filter_by, '')}"
 
+        # Apply sorting based on the specified sort parameter
+        if sort_by:
+            sort_query = {
+                'name_asc': 'ORDER BY establishment_name ASC',
+                'name_desc': 'ORDER BY establishment_name DESC',
+                'rating_asc': 'ORDER BY average_rating ASC',
+                'rating_desc': 'ORDER BY average_rating DESC'
+            }
+            query += f" {sort_query.get(sort_by, '')}"
+
+        # Execute the final SQL query
+        cursor.execute(query, query_params)
+        # Fetch all the results from the executed query
+        establishments = cursor.fetchall()
         # Close the connection
         connection.close()
 
-        # Render the template with the establishments
         return render_template("EstList.html", establishments=establishments)
     elif request.method == 'POST':
         est_search = request.form.get('est_search')
@@ -412,12 +428,12 @@ def see_est():
             query_params = [f"%{est_search}%", f"{est_address}%"]
             est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
                 FROM ESTABLISHMENT E
-                WHERE E.establishment_name ILIKE %s and E.address_location ILIKE %s"""
+                WHERE E.establishment_name ILIKE %s AND E.address_location ILIKE %s"""
         elif user_type == 'owner':
             query_params = [f"%{est_search}%", user_id, f"{est_address}%"]
             est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
                 FROM ESTABLISHMENT E
-                WHERE E.establishment_name ILIKE %s AND E.owner_id = %s and E.address_location ILIKE %s"""
+                WHERE E.establishment_name ILIKE %s AND E.owner_id = %s AND E.address_location ILIKE %s"""
         else:
             connection.close()
             return redirect(url_for('unauth'))
@@ -429,6 +445,7 @@ def see_est():
                 establishments = cursor.fetchall()
 
         return render_template('EstList.html', establishments=establishments)
+
 
 # Read food establishment as Customer
 @app.route('/customer/establishment-list', methods=['GET'])
@@ -608,7 +625,7 @@ def add_fd():
 # Read food item as admin/owner
 @app.route('/admin/food-list', methods=['GET', 'POST'])
 def see_fd():
-    #Check if the user is logged in
+    # Check if the user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
@@ -616,81 +633,94 @@ def see_fd():
     # Get the user ID from the session
     user_id = session['user_id']
 
-    # Open a conncetion to the database
+    # Initialize query parameters
+    food_search = None
+    price_range = None
+    food_type = None
+    sort_by = None
+
+    # Handle POST requests for form submissions
+    if request.method == 'POST':
+        food_search = request.form.get('food_search')
+        price_range = request.form.get('price_range')
+        food_type = request.form.get('type')
+        sort_by = request.form.get('sort')
+
+        # Redirect to the GET route with query parameters
+        return redirect(url_for('see_fd', food_search=food_search, price_range=price_range, type=food_type, sort=sort_by))
+
+    # Handle GET requests for URL parameters
+    elif request.method == 'GET':
+        food_search = request.args.get('food_search')
+        price_range = request.args.get('price_range')
+        food_type = request.args.get('type')
+        sort_by = request.args.get('sort')
+
+    # Open a connection to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
 
     # Check the user type
     cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
     user_type = cursor.fetchone()[0]
-    if request.method == 'GET':
-        # Fetch food items based on user type
-        if user_type == 'admin':
-            cursor.execute("""
-                SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-                FROM FOOD
-                JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-            """)
-        elif user_type == 'owner':
-            cursor.execute("""
-                SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-                FROM FOOD
-                JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-                WHERE FOOD.creator_id = %s
-            """, (user_id,))
+
+    # Base query to select food items
+    query = """
+        SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+        FROM FOOD
+        JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+    """
+    
+    query_params = []
+
+    # Apply filtering based on user type
+    if user_type == 'owner':
+        query += " WHERE FOOD.creator_id = %s"
+        query_params.append(user_id)
+
+    # Apply search filter
+    if food_search:
+        if "WHERE" in query:
+            query += " AND FOOD.foodname ILIKE %s"
         else:
-            connection.close()
-            return redirect(url_for('unauth'))
-        
-        # Fetch food items
-        food_items = cursor.fetchall()
+            query += " WHERE FOOD.foodname ILIKE %s"
+        query_params.append(f"%{food_search}%")
 
-        # Close the connection 
-        connection.close()
-
-        # Render the template with the food items
-        return render_template("FoodList.html", food_items=food_items)
-    elif request.method == 'POST':
-        spl_word = '-'
-        food_search = request.form.get('food_search')
-        price_range = request.form.get('price_range')
-        food_type = request.form.get('type')
-        print("Price range is:" + price_range)
-        
-
-        if user_type == 'admin':
-            query_params = [f"%{food_search}%"]
-        
-            # Building dynamic query based on provided filters
-            food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
-                             FROM FOOD 
-                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
-                             WHERE FOOD.foodname ILIKE %s"""
+    # Apply price range filtering
+    if price_range and price_range != "none":
+        min_price, max_price = map(int, price_range.split('-'))
+        if "WHERE" in query:
+            query += " AND FOOD.price BETWEEN %s AND %s"
         else:
-            query_params = [f"%{food_search}%", user_id]
-        
-            # Building dynamic query based on provided filters
-            food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
-                             FROM FOOD 
-                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
-                             WHERE FOOD.foodname ILIKE %s and FOOD.creator_id = %s"""           
-        
-        if price_range != "none":
-            min_price, max_price = map(int, price_range.split(spl_word))
-            food_name_query += " AND price BETWEEN %s AND %s"
-            query_params.extend([min_price, max_price])
-        
-        if food_type != "none":
-            food_name_query += " AND FOOD.food_type = %s"
-            query_params.append(food_type)
-        
-        # Connect to the database
-        with psycopg2.connect(supabase_connection_string) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(food_name_query, query_params)
-                food_items = cursor.fetchall()
+            query += " WHERE FOOD.price BETWEEN %s AND %s"
+        query_params.extend([min_price, max_price])
 
-        return render_template('FoodList.html', food_items=food_items, show_establishment_name=True)
+    # Apply food type filtering
+    if food_type and food_type != "none":
+        if "WHERE" in query:
+            query += " AND FOOD.food_type = %s"
+        else:
+            query += " WHERE FOOD.food_type = %s"
+        query_params.append(food_type)
+
+    # Apply sorting based on the specified sort parameter
+    if sort_by:
+        sort_query = {
+            'name_asc': 'ORDER BY FOOD.foodname ASC',
+            'name_desc': 'ORDER BY FOOD.foodname DESC',
+            'rating_asc': 'ORDER BY FOOD.average_rating ASC NULLS LAST',
+            'rating_desc': 'ORDER BY FOOD.average_rating DESC NULLS LAST'
+        }
+        query += f" {sort_query.get(sort_by, '')}"
+
+    # Execute the final SQL query
+    cursor.execute(query, query_params)
+    # Fetch all the results from the executed query
+    food_items = cursor.fetchall()
+    # Close database connection
+    connection.close()
+
+    return render_template("FoodList.html", food_items=food_items, show_establishment_name=True)
 
 # Read food item as customer
 @app.route('/customer/food-list', methods=['GET', 'POST'])
