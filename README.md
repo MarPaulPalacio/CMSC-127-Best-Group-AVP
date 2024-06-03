@@ -153,9 +153,15 @@ The task for the project team is to design a flexible and realistic database and
 
 ### AS CUSTOMER
 
-### 1. Browse all food items
+### Browse all food items
+1. In food list page '/customer/food-list', you can see all the foods along with its respective organizations in its subheader.
+2. It is possible to search an item by its name and/or Price Range.
+3. Immediate sorting by name or rating and filter by type is also available.
 
-### 2. Browse establishments
+### Browse establishments
+1. In establishment list page '/customer/establishment-list', you can see all the establishment along with its address in its subheader.
+2. It is possible to search an organization by its name and/or address.
+3. Immediate sorting by name or rating and filter by rating is also available.
 
 ### 3. Browse food items of a specific establishment
 
