@@ -9,52 +9,70 @@
 <body class="flex flex-col mt-24 items-center h-screen bg-gray-100">
     <!-- Include the navigation bar -->
     {% include 'CustomerNav.html' %}
+    <div class="flex flex-row w-full">
+        <!-- Tool Sidebar -->
+        <div class="w-2/6">
+            <div class="bg-white shadow-md rounded-lg p-6 flex flex-col justify-between fixed items-center ml-12">
+                <!-- Form for searching -->
+                <form action="{{ url_for('view_est') }}" method="post" class="w-full flex flex-col space-y-4">
+                    <!-- Search by name -->
+                    <input class="w-full px-3 py-2 border rounded-md" id="est_search" name="est_search" type="text" placeholder="Search by name">
+                    
+                    <!-- Search by address -->
+                    <input class="w-full px-3 py-2 border rounded-md" id="est_address" name="est_address" type="text" placeholder="Search by Address">
 
-    <!-- Toolbar header -->
-    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
-        <!-- Search bar -->
-        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+                    <!-- Search Button -->
+                    <button type="submit" class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                        Search
+                    </button>
+                </form>
 
-        <!-- Dropdown sorting -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Sort by Name or Rating</option>
-            <option value="">Sort by Name (Ascending)</option>
-            <option value="">Sort by Name (Descending)</option>
-            <option value="">Sort by Rating (Ascending)</option>
-            <option value="">Sort by Rating (Descending)</option>
-        </select>
+                <!-- Form for sorting and filtering -->
+                <form method="GET" action="{{ url_for('view_est') }}" class="flex flex-col mt-4 space-y-4">
+                    <!-- Dropdown sorting -->
+                    <select name="sort" class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;" onchange="this.form.submit()">
+                        <option value="" disabled selected>Sort by Name or Rating</option>
+                        <option value="name_asc">Sort by Name (Ascending)</option>
+                        <option value="name_desc">Sort by Name (Descending)</option>
+                        <option value="rating_asc">Sort by Rating (Ascending)</option>
+                        <option value="rating_desc">Sort by Rating (Descending)</option>
+                    </select>
 
-        <!-- Dropdown filter -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Filter by Rating</option>
-            <option value="">1-1.99</option>
-            <option value="">2-2.99</option>
-            <option value="">3-3.99</option>
-            <option value="">4-4.99</option>
-            <option value="">5</option>
-        </select>
-    </div>
+                    <!-- Dropdown filter -->
+                    <select name="filter" class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;" onchange="this.form.submit()">
+                        <option value="" disabled selected>Filter by Rating</option>
+                        <option value="1-1.99">1-1.99</option>
+                        <option value="2-2.99">2-2.99</option>
+                        <option value="3-3.99">3-3.99</option>
+                        <option value="4-4.99">4-4.99</option>
+                        <option value="5">5</option>
+                    </select>
+                </form>
+            </div>
+        </div>
 
-    <!-- Main content -->
-    <div class="w-full max-w-6xl mb-8">
-        <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
+        <!-- Main content -->
+        <div class="w-5/6 mr-12">
+            <h1 class="text-2xl font-bold mb-4">Establishment List</h1>                
+                    <!-- Establishment Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                        {% for establishment in establishments %}
+                        <a href="/customer/food-list/{{ establishment[0] }}" class="hover:cursor-pointer">
+                            <div class="bg-white shadow-md rounded-lg p-6">
+                                <h2 class="text-lg font-bold mb-2">{{ establishment[1] }}</h2>
+                                <p class="text-gray-600 mb-1">{{ establishment[2].split(',')[0] }}</p>
+                                <p class="text-gray-600">Average Rating: {{ establishment[3] }}</p>
         
-        <!-- Establishment Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-            {% for establishment in establishments %}
-            <a href="/customer/food-list/{{ establishment[0] }}" class="hover:cursor-pointer">
-                <div class="bg-white shadow-md rounded-lg p-6">
-                    <h2 class="text-lg font-bold mb-2">{{ establishment[1] }}</h2>
-                    <p class="text-gray-600 mb-1">{{ establishment[2].split(',')[0] }}</p>
-                    <p class="text-gray-600">Average Rating: {{ establishment[3] }}</p>
-
-                    <!-- Link to go to Review Establishment or View Establishment Reviews routes -->
-                    <a href="{{ url_for('review_establishment', establishment_id=establishment[0]) }}" class="text-blue-500 underline">Review this Establishment</a>
-                    <br>
-                    <a href="{{ url_for('view_establishment_reviews', establishment_id=establishment[0]) }}" class="text-blue-500 underline">View all reviews</a>
+                                <!-- Link to go to Review Establishment or View Establishment Reviews routes -->
+                                <a href="{{ url_for('review_establishment', establishment_id=establishment[0]) }}" class="text-blue-500 underline">Review this Establishment</a>
+                                <br>
+                                <a href="{{ url_for('view_establishment_reviews', establishment_id=establishment[0]) }}" class="text-blue-500 underline">View all reviews</a>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
                 </div>
-            </a>
-            {% endfor %}
+            </div>
         </div>
     </div>
 </body>
