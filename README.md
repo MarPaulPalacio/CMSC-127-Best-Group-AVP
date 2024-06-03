@@ -190,12 +190,26 @@ Note: You should follow the **Prerequisites** section in this tutorial [Python a
 3. Immediate sorting by name or rating and filter by rating is also available.
 
 ### 3. Browse food items of a specific establishment
+1. Upon clicking an establishment in 'customer/establishment-list', you can see all the foods within the specific establishment.
 
 ### 4. Create a review for a food or an establishment
+1. In 
 
-### 5. View reviews for a food or an establishment
+### View reviews for a food or an establishment
+1. Upon clicking a food in '/customer/food-list', the review section of the page would be seen.
+2. You can see a sub navbar which consists of:
+   - All reviews made for the food item.
+   - Your reviews on the food item.
+   - All reviews made within the past month.
 
-### 6. Edit or Delete a food or establishment review
+### Edit or Delete a food or establishment review
+1a. Upon clicking a food in '/customer/food-list', the review section of the page for the food would be seen.
+1b. Upon clicking 'View All Reviews' in '/customer/establishment-list', the review section of the page for the establishment would be seen.
+2. You can see a sub navbar and upon clicking the 'Your Reviews' section, you would be redirected towards all your reviews upon which you can edit or delete them.
+
+   - In deleting, simply pressing the delete button would delete that review
+   - In editing, you would be redirected on another page which will require you to fill out the new rating and review you want to give towards the food.
+
 
 
 
