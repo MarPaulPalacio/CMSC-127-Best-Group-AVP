@@ -886,6 +886,31 @@ def view_all_fd():
 
     return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
 
+# Read food items of an establishment as a Customer
+@app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
+def view_fd(establishment_id):
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return "You need to log in first."
+
+    # Open a connection to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Fetch food items for the specified establishment
+    cursor.execute("""
+        SELECT food_id, foodname, price, food_type, average_rating 
+        FROM FOOD 
+        WHERE establishment_id = %s
+    """, (establishment_id,))
+    food_items = cursor.fetchall()
+
+    # Close the connection
+    connection.close()
+
+    # Render the template with the food items and show_establishment_name variable set to False
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
+
 ##############################################################################################################################################################
 # ESTABLISHMENT REVIEWS
 ##############################################################################################################################################################
@@ -1097,12 +1122,11 @@ def view_establishment_reviews_month(establishment_id):
     SELECT er.rating, er.establishment_review, er.review_datetime, er.review_id
     FROM ESTABLISHMENT_REVIEW er
     WHERE er.establishment_id = %s
-    and
-    er.user_id = %s AND er.review_datetime >= (CURRENT_DATE - INTERVAL '1 month');
+    AND er.review_datetime >= (CURRENT_DATE - INTERVAL '1 month');
     """
 
     # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
-    cursor.execute(select_reviews_query, (establishment_id, user_id))
+    cursor.execute(select_reviews_query, (establishment_id,))
     establishment_reviews = cursor.fetchall()
 
     # Close the database connection
@@ -1289,10 +1313,11 @@ def view_food_reviews_month(food_id):
     select_reviews_query = """
     SELECT fr.rating, fr.food_review, fr.review_datetime, fr.review_id
     FROM FOOD_REVIEW fr
-    WHERE fr.food_id = %s and fr.user_id = %s and fr.review_datetime >=(CURRENT_DATE - INTERVAL '1 month')
+    WHERE fr.food_id = %s 
+    AND fr.review_datetime >=(CURRENT_DATE - INTERVAL '1 month')
     """
     # Execute the SQL query to select all food reviews for the specific food item
-    cursor.execute(select_reviews_query, (food_id, user_id))
+    cursor.execute(select_reviews_query, (food_id,))
     # Fetch all the selected food reviews
     food_reviews = cursor.fetchall()
 
