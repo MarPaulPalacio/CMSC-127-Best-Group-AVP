@@ -8,13 +8,13 @@ The Food Review Information System is designed to record data on food reviews an
 ### Task
 The task for the project team is to design a flexible and realistic database and implement it using any chosen programming language with RDBMS limited to MySQL, MariaDB, or PostgreSQL.
 
-## FEATURES
+### Features
 1. Add, update, and delete a food review (on a food establishment or a food item)
 2. Add, delete, search, and update a food establishment
 3. Add, delete, search, and update a food item
 4. Add, delete , search, and update a user account (Optional)
 
-## REPORTS TO BE GENERATED
+### Reports to be generated
 1. View all food establishments
 2. View all food reviews for an establishment or a food item
 3. View all food items from an establishment
@@ -83,15 +83,15 @@ The task for the project team is to design a flexible and realistic database and
 
 ## FILE STRUCTURE
 1. Environement Variables  
-    Found in **.venv**, this directory stores the Python environment variables for the Flask application.
+    Found in `.venv`, this directory stores the Python environment variables for the Flask application.
 2. HTML Templates  
-    Found in **/templates**, this directory stores the HTML files that were used to generate the user interface of the project. 
+    Found in `/templates`, this directory stores the HTML files that were used to generate the user interface of the project. 
 3. Python Flask Application  
-    Filename **app.py**, this stores the entire Python Flask code for the project.
+    Filename `app.py`, this stores the entire Python Flask code for the project.
 4. Procfile  
-    A file used for deployment to Koyeb. And used Heroku deployments to specify the commands that should be executed by the app's dynos (containers) on startup.
+    `Procfile` used for Heroku deployment to specify the commands that should be executed by the app's dynos (containers) on startup.
 5. Dependencies  
-    Filename **requirements.txt**, this file stores all libraries or dependencies that were used in the development of this application.
+    Filename `requirements.txt`, this file stores all libraries or dependencies that were used in the development of this application.
 
 ## SETTING UP PROJECT ENVIRONMENT FOR LOCAL SERVER
 1. Clone the repository
@@ -99,7 +99,7 @@ The task for the project team is to design a flexible and realistic database and
     ```bash
     git clone https://<TOKEN>@github.com/MarPaulPalacio/CMSC-127-Best-Group-AVP.git
     ```
-2. Go to Main branch
+2. Go to `main` branch
 
     ```bash
     git checkout main
