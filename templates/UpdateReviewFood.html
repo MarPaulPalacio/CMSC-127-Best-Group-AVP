@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Review Food</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="flex flex-col mt-24 items-center h-screen bg-gray-100">
+    <!-- Include the navigation bar -->
+    {% include 'CustomerNav.html' %}
+
+    <!-- Main content -->
+    <div class="w-full max-w-4xl mb-8">
+        <h1 class="text-2xl font-bold mb-4">Update Review</h1>
+        
+        <!-- Form for food review -->
+        <form action="{{ url_for('update_review_food', review_id=review_id, food_id=food_id) }}" method="post" class="bg-white shadow-md rounded-lg p-6">
+            <!-- Rating -->
+            <div class="mb-4">
+                <label for="rating" class="block text-gray-700 text-sm font-bold mb-2">Rating (1.0 - 5.0):</label>
+                <input type="number" step="0.1" min="1.0" max="5.0" id="rating" name="rating" required class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+            </div>
+            <!-- Comment -->
+            <div class="mb-4">
+                <label for="review" class="block text-gray-700 text-sm font-bold mb-2">Review:</label>
+                <textarea id="review" name="review" rows="5" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"></textarea>
+            </div>
+
+            <!-- Submit button -->
+            <div class="flex items-center justify-between">
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Submit Review
+                </button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

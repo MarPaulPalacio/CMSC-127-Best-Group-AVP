@@ -10,10 +10,41 @@
     <!-- Include the navigation bar -->
     {% include 'CustomerNav.html' %}
 
+    <div class="flex flex-row w-screen justify-center relative">
+        <div>
+            <form action="{{ url_for('view_all_fd') }}" method="post" class="bg-white shadow-md rounded-lg p-6 mr-20 mt-1/2 flex flex-col justify-between fixed items-center ml-20 h-80 mt-64">
+                <input class="px-3 py-2 mb-4 border rounded-md" type="text" id="food_search" name="food_search" placeholder="Search by name">
+                
+                
+                <select class="px-3 py-2 mb-4 border rounded-md appearance-none" id="price_range" name="price_range" style="color: #9ca3af;">
+                    <option value="none" selected>Set Price Range (Currently None)</option>
+                    <option value="1-50">1-50</option>
+                    <option value="51-99">51-99</option>
+                    <option value="100-150">100-150</option>
+                    <option value="151-200">151-200</option>
+                    <option value="201-250">201-250</option>
+                </select>
+    
+                <select class="px-3 py-2 mb-4 border rounded-md appearance-none" id="type" name="type" style="color: #9ca3af;">
+                    <option value="none" selected>Set Type (Currently None)</option>
+                    <option value="meat">Meat</option>
+                    <option value="vegetable">Vegetable</option>
+                    <option value="seafood">Seafood</option>
+                    <option value="dessert">Dessert</option>
+                    <option value="beverage">Beverage</option>
+                </select>
+    
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Search
+                </button>
+            </form>
+        </div>
+        
+
     <!-- Toolbar header -->
-    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
-        <!-- Search bar -->
-        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+    <div class ="flex flex-col w-full items-center ml-96">
+            <div class="w-full max-w-6xl mb-8 flex justify-between items-center flex-row">
+                <!-- Search bar -->
 
         <!-- Form for sorting and filtering -->
         <form method="GET" action="{{ url_for('view_food') }}" class="flex space-x-4">
@@ -41,7 +72,7 @@
     <!-- Main content -->
     <div class="w-full max-w-6xl mb-8">
         <h1 class="text-2xl font-bold mb-4">Food List</h1>
-        
+
         <!-- Food Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
             {% if food_items %}
@@ -52,6 +83,7 @@
                         <p class="text-gray-600 mb-1">Price: {{ food_item[2] }}</p>
                         <p class="text-gray-600 mb-1">Type: {{ food_item[3] }}</p>
                         <p class="text-gray-600">Average Rating: {{ food_item[4] }}</p>
+                        <p class="text-gray-600">Establishment: {{ food_item[5] }}</p>
 
                         <!-- Link to go to Review Food or View Food Reviews routes -->
                         <a href="{{ url_for('review_food', food_id=food_item[0]) }}" class="text-blue-500 underline">Review this Food Item</a>
@@ -62,10 +94,12 @@
                 {% endfor %}
             {% else %}
                 <div class="flex w-full items-center justify-center">
-                    <p class="text-lg font-bold text-gray-600 text-center">This establishment has no food.</p>
+                    <p class="text-lg font-bold text-gray-600 text-center">No food items found.</p>
                 </div>
             {% endif %}
+          </div>
         </div>
+      </div>
     </div>
 </body>
 </html>

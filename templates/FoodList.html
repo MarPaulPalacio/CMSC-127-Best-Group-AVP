@@ -18,8 +18,34 @@
     <!-- Toolbar header -->
     <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
         <!-- Search bar -->
-        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
-
+        <div>
+            <form action="{{ url_for('see_fd') }}" method="post" class="bg-white shadow-md rounded-lg p-6 mr-20 mt-1/2 flex flex-col justify-between h-80">
+                <input class="px-3 py-2 mb-4 border rounded-md" type="text" id="food_search" name="food_search" placeholder="Search by name">
+                
+                
+                <select class="px-3 py-2 mb-4 border rounded-md appearance-none" id="price_range" name="price_range" style="color: #9ca3af;">
+                    <option value="none" selected>Set Price Range (Currently None)</option>
+                    <option value="1-50">1-50</option>
+                    <option value="51-99">51-99</option>
+                    <option value="100-150">100-150</option>
+                    <option value="151-200">151-200</option>
+                    <option value="201-250">201-250</option>
+                </select>
+    
+                <select class="px-3 py-2 mb-4 border rounded-md appearance-none" id="type" name="type" style="color: #9ca3af;">
+                    <option value="none" selected>Set Type (Currently None)</option>
+                    <option value="meat">Meat</option>
+                    <option value="vegetable">Vegetable</option>
+                    <option value="seafood">Seafood</option>
+                    <option value="dessert">Dessert</option>
+                    <option value="beverage">Beverage</option>
+                </select>
+    
+                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                    Search
+                </button>
+            </form>
+        </div>
         <!-- Dropdown sorting -->
         <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
             <option value="" disabled selected>Sort by Name or Rating</option>

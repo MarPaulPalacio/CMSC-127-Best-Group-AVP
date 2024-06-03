@@ -359,14 +359,12 @@ def add_est():
             return redirect(url_for('see_est'))
 
 # Read food establishment as Owner/Admin
-@app.route('/admin/establishment-list', methods=['GET'])
+@app.route('/admin/establishment-list', methods=['GET', 'POST'])
 def see_est():
     # Check if the user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-
-    # Get the user ID from the session
     user_id = session['user_id']
 
     # Open a connection to the database
@@ -377,30 +375,70 @@ def see_est():
     cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
     user_type = cursor.fetchone()[0]
 
-    # Fetch establishments based on user type
-    if user_type == 'admin':
-        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
-    elif user_type == 'owner':
-        cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
-    else:
+    if request.method =='GET':
+        # Get the user ID from the session
+        user_id = session['user_id']
+
+        # Open a connection to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+
+        # Check the user type
+        cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
+        user_type = cursor.fetchone()[0]
+
+        # Fetch establishments based on user type
+        if user_type == 'admin':
+            cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT")
+        elif user_type == 'owner':
+            cursor.execute("SELECT establishment_id, establishment_name, address_location, average_rating FROM ESTABLISHMENT WHERE owner_id = %s", (user_id,))
+        else:
+            connection.close()
+            return redirect(url_for('unauth'))
+
+        # Fetch establishments
+        establishments = cursor.fetchall()
+
+        # Close the connection
         connection.close()
-        return redirect(url_for('unauth'))
 
-    # Fetch establishments
-    establishments = cursor.fetchall()
+        # Render the template with the establishments
+        return render_template("EstList.html", establishments=establishments)
+    elif request.method == 'POST':
+        est_search = request.form.get('est_search')
+        est_address = request.form.get('est_address')
 
-    # Close the connection
-    connection.close()
+        if user_type == 'admin':
+            query_params = [f"%{est_search}%", f"{est_address}%"]
+            est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
+                FROM ESTABLISHMENT E
+                WHERE E.establishment_name ILIKE %s and E.address_location ILIKE %s"""
+        elif user_type == 'owner':
+            query_params = [f"%{est_search}%", user_id, f"{est_address}%"]
+            est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
+                FROM ESTABLISHMENT E
+                WHERE E.establishment_name ILIKE %s AND E.owner_id = %s and E.address_location ILIKE %s"""
+        else:
+            connection.close()
+            return redirect(url_for('unauth'))
 
-    # Render the template with the establishments
-    return render_template("EstList.html", establishments=establishments)
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(est_name_query, query_params)
+                establishments = cursor.fetchall()
 
+        return render_template('EstList.html', establishments=establishments)
+
+# Read food establishment as Customer
 @app.route('/customer/establishment-list', methods=['GET'])
 def view_est():
     # Check if the user is logged in by verifying if 'user_id' is in the session
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
+        
+    if request.method == 'GET':
 
     # Retrieve sorting and filtering parameters from the request URL
     sort_by = request.args.get('sort')
@@ -449,7 +487,26 @@ def view_est():
     # Close database
     connection.close()
 
-    return render_template("ViewEst.html", establishments=establishments)
+        return render_template("ViewEst.html", establishments=establishments)
+    elif request.method=='POST':
+        est_search = request.form.get('est_search')
+        est_address = request.form.get('est_address')
+
+        query_params = [f"%{est_search}%", f"{est_address}%"]
+        
+        # Building dynamic query based on provided filters
+        est_name_query = """SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating
+            FROM ESTABLISHMENT E
+            where E.establishment_name ILIKE %s AND E.address_location ILIKE %s"""
+        
+        
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(est_name_query, query_params)
+                establishments = cursor.fetchall()
+
+        return render_template('ViewEst.html', establishments=establishments)
 
 
 # Update food establishment
@@ -550,7 +607,7 @@ def add_fd():
             return redirect(url_for('see_fd'))
 
 # Read food item as admin/owner
-@app.route('/admin/food-list', methods=['GET'])
+@app.route('/admin/food-list', methods=['GET', 'POST'])
 def see_fd():
     #Check if the user is logged in
     if 'user_id' not in session:
@@ -567,82 +624,156 @@ def see_fd():
     # Check the user type
     cursor.execute("SELECT user_type FROM ACCOUNT WHERE user_id = %s", (user_id,))
     user_type = cursor.fetchone()[0]
+    if request.method == 'GET':
+        # Fetch food items based on user type
+        if user_type == 'admin':
+            cursor.execute("""
+                SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+                FROM FOOD
+                JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+            """)
+        elif user_type == 'owner':
+            cursor.execute("""
+                SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
+                FROM FOOD
+                JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
+                WHERE FOOD.creator_id = %s
+            """, (user_id,))
+        else:
+            connection.close()
+            return redirect(url_for('unauth'))
+        
+        # Fetch food items
+        food_items = cursor.fetchall()
 
-    # Fetch food items based on user type
-    if user_type == 'admin':
-        cursor.execute("""
-            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-            FROM FOOD
-            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-        """)
-    elif user_type == 'owner':
-        cursor.execute("""
-            SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name
-            FROM FOOD
-            JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id
-            WHERE FOOD.creator_id = %s
-        """, (user_id,))
-    else:
+        # Close the connection 
         connection.close()
-        return redirect(url_for('unauth'))
-    
-    # Fetch food items
-    food_items = cursor.fetchall()
 
-    # Close the connection 
-    connection.close()
+        # Render the template with the food items
+        return render_template("FoodList.html", food_items=food_items)
+    elif request.method == 'POST':
+        spl_word = '-'
+        food_search = request.form.get('food_search')
+        price_range = request.form.get('price_range')
+        food_type = request.form.get('type')
+        print("Price range is:" + price_range)
+        
 
-    # Render the template with the food items
-    return render_template("FoodList.html", food_items=food_items)
+        if user_type == 'admin':
+            query_params = [f"%{food_search}%"]
+        
+            # Building dynamic query based on provided filters
+            food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
+                             FROM FOOD 
+                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
+                             WHERE FOOD.foodname ILIKE %s"""
+        else:
+            query_params = [f"%{food_search}%", user_id]
+        
+            # Building dynamic query based on provided filters
+            food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
+                             FROM FOOD 
+                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
+                             WHERE FOOD.foodname ILIKE %s and FOOD.creator_id = %s"""           
+        
+        if price_range != "none":
+            min_price, max_price = map(int, price_range.split(spl_word))
+            food_name_query += " AND price BETWEEN %s AND %s"
+            query_params.extend([min_price, max_price])
+        
+        if food_type != "none":
+            food_name_query += " AND FOOD.food_type = %s"
+            query_params.append(food_type)
+        
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(food_name_query, query_params)
+                food_items = cursor.fetchall()
+
+        return render_template('FoodList.html', food_items=food_items, show_establishment_name=True)
 
 # Read food item as customer
-@app.route('/customer/food-list', methods=['GET'])
+@app.route('/customer/food-list', methods=['GET', 'POST'])
 def view_all_fd():
     # Check if user is logged in
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-    # Retrieve sorting and filtering parameters from the request URL
-    sort_by = request.args.get('sort')
-    filter_by = request.args.get('filter')
+    if request.method == 'GET':
+        # Retrieve sorting and filtering parameters from the request URL
+        sort_by = request.args.get('sort')
+        filter_by = request.args.get('filter')
 
-    # Connect to the database
-    connection = psycopg2.connect(supabase_connection_string)
-    cursor = connection.cursor()
+        # Connect to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
 
-    # Query to select all food items and their reviews
-    query = """
-        SELECT F.food_id, F.foodname, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
-        FROM FOOD F
-        LEFT JOIN (
-            SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
-            FROM FOOD_REVIEW
-            GROUP BY food_id
-        ) FR ON F.food_id = FR.food_id
-    """
+        # Query to select all food items and their reviews
+        query = """
+            SELECT F.food_id, F.foodname, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
+            FROM FOOD F
+            LEFT JOIN (
+                SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
+                FROM FOOD_REVIEW
+                GROUP BY food_id
+            ) FR ON F.food_id = FR.food_id
+        """
 
-    # Apply filtering based on food type if a filter is specified
-    if filter_by:
-        query += f" WHERE F.food_type = '{filter_by.capitalize()}'"
+        # Apply filtering based on food type if a filter is specified
+        if filter_by:
+            query += f" WHERE F.food_type = '{filter_by.capitalize()}'"
 
-    # Apply sorting based on the specified sort parameter
-    if sort_by:
-        sort_query = {
-            'name_asc': 'ORDER BY F.foodname ASC',
-            'name_desc': 'ORDER BY F.foodname DESC',
-            'rating_asc': 'ORDER BY F.average_rating ASC NULLS LAST',
-            'rating_desc': 'ORDER BY F.average_rating DESC NULLS LAST'
-        }
-        query += f" {sort_query.get(sort_by, '')}"
+        # Apply sorting based on the specified sort parameter
+        if sort_by:
+            sort_query = {
+                'name_asc': 'ORDER BY F.foodname ASC',
+                'name_desc': 'ORDER BY F.foodname DESC',
+                'rating_asc': 'ORDER BY F.average_rating ASC NULLS LAST',
+                'rating_desc': 'ORDER BY F.average_rating DESC NULLS LAST'
+            }
+            query += f" {sort_query.get(sort_by, '')}"
 
-    # Execute the final SQL query
-    cursor.execute(query)
-    # Fetch all the results from the executed query
-    food_items = cursor.fetchall()
-    # Close database connection
-    connection.close()
+        # Execute the final SQL query
+        cursor.execute(query)
+        # Fetch all the results from the executed query
+        food_items = cursor.fetchall()
+        # Close database connection
+        connection.close()
 
-    return render_template("ViewFood.html", food_items=food_items, show_establishment_name = True)
+        return render_template("ViewFood.html", food_items=food_items, show_establishment_name = True)
+
+    elif request.method =='POST':
+        spl_word = '-'
+        food_search = request.form.get('food_search')
+        price_range = request.form.get('price_range')
+        food_type = request.form.get('type')
+        print("Price range is:" + price_range)
+        
+        query_params = [f"%{food_search}%"]
+        
+        # Building dynamic query based on provided filters
+        food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
+                             FROM FOOD 
+                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
+                             WHERE foodname ILIKE %s"""
+        
+        if price_range != "none":
+            min_price, max_price = map(int, price_range.split(spl_word))
+            food_name_query += " AND price BETWEEN %s AND %s"
+            query_params.extend([min_price, max_price])
+        
+        if food_type != "none":
+            food_name_query += " AND FOOD.food_type = %s"
+            query_params.append(food_type)
+        
+        # Connect to the database
+        with psycopg2.connect(supabase_connection_string) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute(food_name_query, query_params)
+                food_items = cursor.fetchall()
+
+        return render_template('ViewFood.html', food_items=food_items, show_establishment_name=True)
 
 # Read food items of an establishment as a Customer
 @app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
@@ -716,7 +847,7 @@ def delete_fd(food_id):
     connection.close()
     return redirect(url_for('see_fd'))
 
-
+##############################################################################################################################################################              ESTABLISHMENT REVIEWS
 # Add establishment review
 @app.route('/customer/review-establishment/<int:establishment_id>', methods=['GET', 'POST'])
 def review_establishment(establishment_id):
@@ -770,6 +901,54 @@ def review_establishment(establishment_id):
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_est'))
 
+# Add establishment review
+@app.route('/customer/review-establishment/<int:review_id>/<int:establishment_id>', methods=['GET', 'POST'])
+def update_review_establishment(review_id, establishment_id):
+    
+    # If the request method is GET, render the review form
+    if request.method == 'GET':
+        return render_template('UpdateReviewEstablishment.html', review_id=review_id, establishment_id = establishment_id)
+    # If the request method is POST, handle form submission
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+        
+
+        print(request.form)
+        # Connect to the database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
+        
+        # Insert review into the database
+        update_review_sql = """
+    UPDATE ESTABLISHMENT_REVIEW
+        SET rating = %s, establishment_review = %s,review_datetime = NOW()
+        WHERE review_id = %s;
+        """
+        # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table.
+        cursor.execute(update_review_sql, (rating, review, review_id))
+        # Save Changes
+        connection.commit()
+        
+        # Update average rating of the establishment
+        update_avg_rating_sql = """
+        UPDATE ESTABLISHMENT
+        SET average_rating = (
+            SELECT AVG(rating) FROM ESTABLISHMENT_REVIEW WHERE establishment_id = %s
+        )
+        WHERE establishment_id = %s
+        """
+
+        # Execute the SQL query to update the average rating
+        cursor.execute(update_avg_rating_sql, (establishment_id, establishment_id))
+        # Save Changes
+        connection.commit()
+        
+        # Close the database connection
+        connection.close()
+        
+        flash("Review submitted successfully!", "success")
+        return redirect(url_for('view_est'))
 
 # See all review for an establishment   
 @app.route('/customer/establishment-reviews/<int:establishment_id>', methods=['GET'])
@@ -778,6 +957,9 @@ def view_establishment_reviews(establishment_id):
     # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
+
+
+
 
     # Query to get the establishment name
     establishment_name_query = "SELECT establishment_name FROM ESTABLISHMENT WHERE establishment_id = %s"
@@ -795,7 +977,7 @@ def view_establishment_reviews(establishment_id):
     select_reviews_query = """
     SELECT er.rating, er.establishment_review, er.review_datetime
     FROM ESTABLISHMENT_REVIEW er
-    WHERE er.establishment_id = %s
+    WHERE er.establishment_id = %s 
     """
 
     # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
@@ -805,8 +987,100 @@ def view_establishment_reviews(establishment_id):
     # Close the database connection
     connection.close()
 
-    return render_template('ViewEstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name)
+    return render_template('ViewEstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name, establishment_id = establishment_id)
 
+@app.route('/customer/establishment-reviews/user/<int:establishment_id>', methods=['GET'])
+def view_establishment_reviews_user(establishment_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    # Query to get the establishment name
+    establishment_name_query = "SELECT establishment_name FROM ESTABLISHMENT WHERE establishment_id = %s"
+    cursor.execute(establishment_name_query, (establishment_id,))
+    establishment_name = cursor.fetchone()
+
+    # If the establishment is found, retrieve the name
+    if establishment_name:
+        establishment_name = establishment_name[0]
+    else:
+        flash("Establishment not found.", "error")
+        return redirect(url_for('view_est'))
+
+    # Query to select all establishment reviews for the specific establishment
+    select_reviews_query = """
+    SELECT er.rating, er.establishment_review, er.review_datetime, er.review_id
+    FROM ESTABLISHMENT_REVIEW er
+    WHERE er.establishment_id = %s
+    and
+    er.user_id = %s
+    """
+
+    # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
+    cursor.execute(select_reviews_query, (establishment_id, user_id))
+    establishment_reviews = cursor.fetchall()
+
+    # Close the database connection
+    connection.close()
+
+    return render_template('ViewEstablishmentReviewsUser.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name, establishment_id = establishment_id)
+
+
+@app.route('/customer/establishment-reviews/month/<int:establishment_id>', methods=['GET'])
+def view_establishment_reviews_month(establishment_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    # Query to get the establishment name
+    establishment_name_query = "SELECT establishment_name FROM ESTABLISHMENT WHERE establishment_id = %s"
+    cursor.execute(establishment_name_query, (establishment_id,))
+    establishment_name = cursor.fetchone()
+
+    # If the establishment is found, retrieve the name
+    if establishment_name:
+        establishment_name = establishment_name[0]
+    else:
+        flash("Establishment not found.", "error")
+        return redirect(url_for('view_est'))
+
+    # Query to select all establishment reviews for the specific establishment
+    select_reviews_query = """
+    SELECT er.rating, er.establishment_review, er.review_datetime, er.review_id
+    FROM ESTABLISHMENT_REVIEW er
+    WHERE er.establishment_id = %s
+    and
+    er.user_id = %s AND er.review_datetime >= (CURRENT_DATE - INTERVAL '1 month');
+    """
+
+    # Execute the SQL command to insert a new review into the ESTABLISHMENT_REVIEW table and save changes
+    cursor.execute(select_reviews_query, (establishment_id, user_id))
+    establishment_reviews = cursor.fetchall()
+
+    # Close the database connection
+    connection.close()
+
+    return render_template('ViewEstablishmentReviews.html', establishment_reviews=establishment_reviews, establishment_name=establishment_name, establishment_id = establishment_id)
+
+
+@app.route('/customer/delete-review/<int:review_id>', methods=['POST'])
+def delete_establishment_review(review_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+
+    cursor.execute("DELETE FROM ESTABLISHMENT_REVIEW WHERE review_id = %s", (review_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('view_est'))
 
 @app.route('/customer/food-list', methods=['GET'])
 def view_food():
@@ -819,8 +1093,11 @@ def view_food():
     filter_by = request.args.get('filter')
 
     # Connect to the database
+    user_id=session['user_id']
+    print(user_id)
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
+    
 
     # Query to select all food items and their reviews
     query = """
@@ -854,7 +1131,10 @@ def view_food():
     # Close database connection
     connection.close()
 
-    return render_template("ViewFood.html", food_items=food_items)
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=False)
+
+
+##############################################################################################################################################################              FOOD REVIEWS
 
 # Add food review
 @app.route('/customer/review-food/<int:food_id>', methods=['GET', 'POST'])
@@ -906,11 +1186,134 @@ def review_food(food_id):
         
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_food'))
+    
+@app.route('/customer/update/review-food/<int:review_id>/<int:food_id>', methods=['GET', 'POST'])
+def update_review_food(review_id, food_id):
+    if request.method == 'GET':
+        return render_template('UpdateReviewFood.html', review_id=review_id, food_id=food_id)
+    
+    elif request.method == 'POST':
+        rating = request.form.get('rating')
+        review = request.form.get('review')
+
+        try:
+            with psycopg2.connect(supabase_connection_string) as connection:
+                with connection.cursor() as cursor:
+                    update_review_sql = """
+                    UPDATE FOOD_REVIEW
+                    SET rating = %s, food_review = %s,review_datetime = NOW()
+                    WHERE review_id = %s;
+                    """
+                    cursor.execute(update_review_sql, (rating, review, review_id))
+
+                    update_avg_rating_sql = """
+                    UPDATE FOOD
+                    SET average_rating = (
+                        SELECT AVG(rating) FROM FOOD_REVIEW WHERE food_id = %s
+                    )
+                    WHERE food_id = %s
+                    """
+                    cursor.execute(update_avg_rating_sql, (food_id, food_id))
+            
+            flash("Review submitted successfully!", "success")
+            return redirect(url_for('view_food'))
+        
+        except Exception as e:
+            flash(f"An error occurred: {e}", "error")
+            return redirect(url_for('update_review_food', review_id=review_id, food_id=food_id))
 
 # See all review for a food
+@app.route('/customer/food-reviews/users/<int:food_id>', methods=['GET'])
+def view_food_reviews_user(food_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    
+
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    # Query to get the food name
+    food_name_query = "SELECT food.foodname FROM FOOD WHERE food_id = %s"
+    cursor.execute(food_name_query, (food_id,))
+    food_name = cursor.fetchone()
+
+    
+
+    # If the food item is found, retrieve the name
+    if food_name:
+        food_name = food_name[0]
+    else:
+        flash("Food item not found.", "error")
+        return redirect(url_for('view_food'))
+
+    # Query to select all food reviews for the specific food item
+    select_reviews_query = """
+    SELECT fr.rating, fr.food_review, fr.review_datetime, fr.review_id
+    FROM FOOD_REVIEW fr
+    WHERE fr.food_id = %s and fr.user_id = %s
+    """
+    # Execute the SQL query to select all food reviews for the specific food item
+    cursor.execute(select_reviews_query, (food_id, user_id))
+    # Fetch all the selected food reviews
+    food_reviews = cursor.fetchall()
+
+    # Close the connection to the database
+    connection.close()
+
+    return render_template('ViewFoodReviewsUser.html', food_reviews=food_reviews, food_name=food_name, food_id = food_id)
+
+@app.route('/customer/food-reviews/month/<int:food_id>', methods=['GET'])
+def view_food_reviews_month(food_id):
+
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+    
+
+    if 'user_id' not in session:
+        flash("You need to login first.", "error")
+        return redirect(url_for('login'))
+
+    user_id = session['user_id']
+    # Query to get the food name
+    food_name_query = "SELECT food.foodname FROM FOOD WHERE food_id = %s"
+    cursor.execute(food_name_query, (food_id,))
+    food_name = cursor.fetchone()
+
+    
+
+    # If the food item is found, retrieve the name
+    if food_name:
+        food_name = food_name[0]
+    else:
+        flash("Food item not found.", "error")
+        return redirect(url_for('view_food'))
+
+    # Query to select all food reviews for the specific food item
+    select_reviews_query = """
+    SELECT fr.rating, fr.food_review, fr.review_datetime, fr.review_id
+    FROM FOOD_REVIEW fr
+    WHERE fr.food_id = %s and fr.user_id = %s and fr.review_datetime >=(CURRENT_DATE - INTERVAL '1 month')
+    """
+    # Execute the SQL query to select all food reviews for the specific food item
+    cursor.execute(select_reviews_query, (food_id, user_id))
+    # Fetch all the selected food reviews
+    food_reviews = cursor.fetchall()
+
+    # Close the connection to the database
+    connection.close()
+
+    return render_template('ViewFoodReviews.html', food_reviews=food_reviews, food_name=food_name, food_id = food_id)
+
+
 @app.route('/customer/food-reviews/<int:food_id>', methods=['GET'])
 def view_food_reviews(food_id):
 
+    
     # Connect to the database
     connection = psycopg2.connect(supabase_connection_string)
     cursor = connection.cursor()
@@ -929,7 +1332,7 @@ def view_food_reviews(food_id):
 
     # Query to select all food reviews for the specific food item
     select_reviews_query = """
-    SELECT fr.rating, fr.food_review, fr.review_datetime
+    SELECT fr.rating, fr.food_review, fr.review_datetime, fr.review_id
     FROM FOOD_REVIEW fr
     WHERE fr.food_id = %s
     """
@@ -941,8 +1344,20 @@ def view_food_reviews(food_id):
     # Close the connection to the database
     connection.close()
 
-    return render_template('ViewFoodReviews.html', food_reviews=food_reviews, food_name=food_name)
+    return render_template('ViewFoodReviews.html', food_reviews=food_reviews, food_name=food_name, food_id = food_id)
+
+
+@app.route('/customer/delete-review/<int:review_id>', methods=['POST'])
+def delete_food_review(review_id):
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+
+    cursor.execute("DELETE FROM FOOD_REVIEW WHERE review_id = %s", (review_id,))
+    connection.commit()
+    connection.close()
+    return redirect(url_for('view_food'))
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=3002)
+    app.run(debug=True, port=3002)  
