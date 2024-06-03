@@ -482,15 +482,15 @@ def edit_est(establishment_id):
     elif request.method == 'POST':
         est_name = request.form['est_name']
         addr_loc = request.form['addr_loc']
-        ave_rating = request.form['ave_rating']
+        # ave_rating = request.form['ave_rating']
         
         connection = psycopg2.connect(supabase_connection_string)
         cursor = connection.cursor()
         cursor.execute("""
             UPDATE ESTABLISHMENT
-            SET establishment_name = %s, address_location = %s, average_rating = %s
+            SET establishment_name = %s, address_location = %s
             WHERE establishment_id = %s
-        """, (est_name, addr_loc, ave_rating, establishment_id))
+        """, (est_name, addr_loc, establishment_id))
         connection.commit()
         connection.close()
         return redirect(url_for('see_est'))
