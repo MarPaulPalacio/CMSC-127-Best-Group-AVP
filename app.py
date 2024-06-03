@@ -1175,7 +1175,7 @@ def review_food(food_id):
         connection.close()
         
         flash("Review submitted successfully!", "success")
-        return redirect(url_for('view_food'))
+        return redirect(url_for('view_food_reviews', food_id=food_id))
 
 # Update food review as customer
 @app.route('/customer/update/review-food/<int:review_id>/<int:food_id>', methods=['GET', 'POST'])
@@ -1207,7 +1207,7 @@ def update_review_food(review_id, food_id):
                     cursor.execute(update_avg_rating_sql, (food_id, food_id))
             
             flash("Review submitted successfully!", "success")
-            return redirect(url_for('view_food'))
+            return redirect(url_for('view_food_reviews', food_id=food_id))
         
         except Exception as e:
             flash(f"An error occurred: {e}", "error")
@@ -1239,7 +1239,7 @@ def view_food_reviews_user(food_id):
         food_name = food_name[0]
     else:
         flash("Food item not found.", "error")
-        return redirect(url_for('view_food'))
+        return redirect(url_for('view_all_fd'))
 
     # Query to select all food reviews for the specific food item
     select_reviews_query = """
@@ -1283,7 +1283,7 @@ def view_food_reviews_month(food_id):
         food_name = food_name[0]
     else:
         flash("Food item not found.", "error")
-        return redirect(url_for('view_food'))
+        return redirect(url_for('view_all_fd'))
 
     # Query to select all food reviews for the specific food item
     select_reviews_query = """
@@ -1318,7 +1318,7 @@ def view_food_reviews(food_id):
         food_name = food_name[0]
     else:
         flash("Food item not found.", "error")
-        return redirect(url_for('view_food'))
+        return redirect(url_for('view_all_fd'))
 
     # Query to select all food reviews for the specific food item
     select_reviews_query = """
@@ -1346,7 +1346,7 @@ def delete_food_review(review_id):
     cursor.execute("DELETE FROM FOOD_REVIEW WHERE review_id = %s", (review_id,))
     connection.commit()
     connection.close()
-    return redirect(url_for('view_food'))
+    return redirect(url_for('view_all_fd'))
 
 # Main application
 if __name__ == "__main__":
