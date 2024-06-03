@@ -18,8 +18,17 @@
     <!-- Toolbar header -->
     <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
         <!-- Search bar -->
-        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
+        <form action="{{ url_for('see_est') }}" method="post" class="bg-white shadow-md rounded-lg p-6 mr-20 mt-1/2 flex flex-col justify-between h-40">
+            <!-- Search bar -->
+        
+            <input class="px-3 py-2 border rounded-md" id="est_search" name="est_search" type="text" placeholder="Search by name">
 
+            <input class="px-3 py-2 border rounded-md" id="est_address" name="est_address" type="text" placeholder="Search by Address">
+
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Search
+            </button>
+        </form>
         <!-- Dropdown sorting -->
         <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
             <option value="" disabled selected>Sort by Name or Rating</option>

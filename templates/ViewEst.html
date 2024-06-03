@@ -10,52 +10,66 @@
     <!-- Include the navigation bar -->
     {% include 'CustomerNav.html' %}
 
-    <!-- Toolbar header -->
-    <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
-        <!-- Search bar -->
-        <input class="px-3 py-2 border rounded-md" type="text" placeholder="Search by name">
-
-        <!-- Dropdown sorting -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Sort by Name or Rating</option>
-            <option value="">Sort by Name (Ascending)</option>
-            <option value="">Sort by Name (Descending)</option>
-            <option value="">Sort by Rating (Ascending)</option>
-            <option value="">Sort by Rating (Descending)</option>
-        </select>
-
-        <!-- Dropdown filter -->
-        <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
-            <option value="" disabled selected>Filter by Rating</option>
-            <option value="">1-1.99</option>
-            <option value="">2-2.99</option>
-            <option value="">3-3.99</option>
-            <option value="">4-4.99</option>
-            <option value="">5</option>
-        </select>
-    </div>
-
-    <!-- Main content -->
-    <div class="w-full max-w-6xl mb-8">
-        <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
+    
+    <div className = "flex flex-row">
+        <!-- Toolbar header -->
+        <form action="{{ url_for('view_est') }}" method="post" class="bg-white shadow-md rounded-lg p-6 mr-20 mt-1/2 flex flex-col justify-between fixed items-center ml-40 h-60 mt-64">
+            <!-- Search bar -->
         
-        <!-- Establishment Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-            {% for establishment in establishments %}
-            <a href="/customer/food-list/{{ establishment[0] }}" class="hover:cursor-pointer">
-                <div class="bg-white shadow-md rounded-lg p-6">
-                    <h2 class="text-lg font-bold mb-2">{{ establishment[1] }}</h2>
-                    <p class="text-gray-600 mb-1">{{ establishment[2].split(',')[0] }}</p>
-                    <p class="text-gray-600">Average Rating: {{ establishment[3] }}</p>
+            <input class="px-3 py-2 border rounded-md" id="est_search" name="est_search" type="text" placeholder="Search by name">
 
-                    <!-- Link to go to Review Establishment or View Establishment Reviews routes -->
-                    <a href="{{ url_for('review_establishment', establishment_id=establishment[0]) }}" class="text-blue-500 underline">Review this Establishment</a>
-                    <br>
-                    <a href="{{ url_for('view_establishment_reviews', establishment_id=establishment[0]) }}" class="text-blue-500 underline">View all reviews</a>
+            <input class="px-3 py-2 border rounded-md" id="est_address" name="est_address" type="text" placeholder="Search by Address">
+
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                Search
+            </button>
+        </form>
+        <div class = "flex flex-col w-screen items-center ml-48">
+            <div class="w-full max-w-6xl mb-8 flex justify-between items-center">
+                <!-- Dropdown sorting -->
+                <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+                    <option value="" disabled selected>Sort by Name or Rating</option>
+                    <option value="">Sort by Name (Ascending)</option>
+                    <option value="">Sort by Name (Descending)</option>
+                    <option value="">Sort by Rating (Ascending)</option>
+                    <option value="">Sort by Rating (Descending)</option>
+                </select>
+    
+                <!-- Dropdown filter -->
+                <select class="px-3 py-2 border rounded-md appearance-none" style="color: #9ca3af;">
+                    <option value="" disabled selected>Filter by Rating</option>
+                    <option value="">1-1.99</option>
+                    <option value="">2-2.99</option>
+                    <option value="">3-3.99</option>
+                    <option value="">4-4.99</option>
+                    <option value="">5</option>
+                </select>
+            </div>
+    
+            <!-- Main content -->
+            <div class="w-full max-w-6xl mb-8 flex flex-col">
+                <h1 class="text-2xl font-bold mb-4">Establishment List</h1>
+                
+                <!-- Establishment Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                    {% for establishment in establishments %}
+                    <a href="/customer/food-list/{{ establishment[0] }}" class="hover:cursor-pointer">
+                        <div class="bg-white shadow-md rounded-lg p-6">
+                            <h2 class="text-lg font-bold mb-2">{{ establishment[1] }}</h2>
+                            <p class="text-gray-600 mb-1">{{ establishment[2].split(',')[0] }}</p>
+                            <p class="text-gray-600">Average Rating: {{ establishment[3] }}</p>
+    
+                            <!-- Link to go to Review Establishment or View Establishment Reviews routes -->
+                            <a href="{{ url_for('review_establishment', establishment_id=establishment[0]) }}" class="text-blue-500 underline">Review this Establishment</a>
+                            <br>
+                            <a href="{{ url_for('view_establishment_reviews', establishment_id=establishment[0]) }}" class="text-blue-500 underline">View all reviews</a>
+                        </div>
+                    </a>
+                    {% endfor %}
                 </div>
-            </a>
-            {% endfor %}
+            </div>
         </div>
+        
     </div>
 </body>
 </html>
