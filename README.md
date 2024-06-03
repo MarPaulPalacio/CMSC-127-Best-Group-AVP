@@ -1,6 +1,6 @@
 # CMSC 127 Project: Food Review Information System
 
-## Project Details
+## PROJECT DETAILS
 
 ### Description
 The Food Review Information System is designed to record data on food reviews and food items from various food establishments in electronic form.
@@ -8,13 +8,13 @@ The Food Review Information System is designed to record data on food reviews an
 ### Task
 The task for the project team is to design a flexible and realistic database and implement it using any chosen programming language with RDBMS limited to MySQL, MariaDB, or PostgreSQL.
 
-## Features
+## FEATURES
 1. Add, update, and delete a food review (on a food establishment or a food item)
 2. Add, delete, search, and update a food establishment
 3. Add, delete, search, and update a food item
 4. Add, delete , search, and update a user account (Optional)
 
-## Reports to be Generated
+## REPORTS TO BE GENERATED
 1. View all food establishments
 2. View all food reviews for an establishment or a food item
 3. View all food items from an establishment
@@ -24,13 +24,13 @@ The task for the project team is to design a flexible and realistic database and
 7. View all food items from an establishment arranged according to price
 8. Search food items from any establishment based on a given price range and/or food type
 
-## Milestones
+## MILESTONES
 1. [Entity Relationship Diagram](https://drive.google.com/drive/folders/1AFLIX-kvRMt2HdSvfaRq2RXgexBnTtO5?usp=drive_link)
 2. [Relational Tables](https://drive.google.com/drive/folders/1UVV4l7a8Zo09bhGMYfhCZXnHvmlyeX2E?usp=drive_link)
 3. [SQL Sample Queries](Albino_Palacio_Villarosa_Milestone3.sql)
 4. [Project Application](https://cmsc-127-project-ibonns-projects-5b997b82.koyeb.app/)
 
-## Technology Stack
+## TECHNOLOGY STACK
 - ### PostgreSQL
     An open-source relational database management system (RDBMS) known for its reliability, robustness, and extensive feature set. It supports SQL queries, transactions, indexing, and advanced data types, making it suitable for handling complex data models and high-volume workloads.
 
@@ -81,7 +81,7 @@ The task for the project team is to design a flexible and realistic database and
 - ### Tailwind
     The utility-first CSS framework that was used to quickly build responsive and customizable user interfaces. Unlike traditional CSS frameworks that come with pre-designed components, Tailwind CSS provides low-level utility classes that you can use to style HTML elements directly. 
 
-## File Structure
+## FILE STRUCTURE
 1. Environement Variables  
     Found in **.venv**, this directory stores the Python environment variables for the Flask application.
 2. HTML Templates  
@@ -93,7 +93,33 @@ The task for the project team is to design a flexible and realistic database and
 5. Dependencies  
     Filename **requirements.txt**, this file stores all libraries or dependencies that were used in the development of this application.
 
-## User Manual
+## SETTING UP PROJECT ENVIRONMENT FOR LOCAL SERVER
+1. Clone the repository
+
+    ```bash
+    git clone https://<TOKEN>@github.com/MarPaulPalacio/CMSC-127-Best-Group-AVP.git
+    ```
+2. Go to Main branch
+
+    ```bash
+    git checkout main
+    ```
+3. Run the line below in your terminal to install python dependencies, you should be in the CMSC-127-Best-Group-AVP folder/directory where requirements.txt is located when running this command.
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+	Note: This is similar to the npm install of React from MERN stack.
+4. Try running the local server of the python flask app by running the line below (still inside the CMSC-127-Best-Group-AVP directory).  
+
+    ```bash
+    python ./app.py
+    ```
+
+Note: You should follow the **Prerequisites** section in this tutorial [Python and Flask Tutorial in Visual Studio Code](https://code.visualstudio.com/docs/python/tutorial-flask) then follow the **Create a project environment for the Flask tutorial**, but instead of doing this in a folder called *hello_flask* do this inside our folder project *CMSC-127-Best-Group-AVP*. 
+
+
+## USER MANUAL
 
 ### SIGN UP  
 1. Visit the home page '/', there are two buttons: Sign Up and Login.
