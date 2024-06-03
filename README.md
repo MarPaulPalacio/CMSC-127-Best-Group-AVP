@@ -189,11 +189,13 @@ Note: You should follow the **Prerequisites** section in this tutorial [Python a
 2. It is possible to search an organization by its name and/or address.
 3. Immediate sorting by name or rating and filter by rating is also available.
 
-### 3. Browse food items of a specific establishment
+### Browse food items of a specific establishment
 1. Upon clicking an establishment in 'customer/establishment-list', you can see all the foods within the specific establishment.
 
-### 4. Create a review for a food or an establishment
-1. In 
+### Create a review for a food or an establishment
+1. In creating a review, both '/customer/food-list' and '/customer/establishment' have their own 'Review this establishment/food' button.
+2. You will be redirected towards a page that will require you to fill out the respective rating and review for the specific establishment or food you want to rate.
+3. Upon submitting, the review can be seen in the reviews page (available on 'Reviews Within the Month', 'All Reviews', "Your Reviews') and can be edited on the 'Your Reviews' page.
 
 ### View reviews for a food or an establishment
 1. Upon clicking a food in '/customer/food-list', the review section of the page would be seen.
@@ -203,8 +205,8 @@ Note: You should follow the **Prerequisites** section in this tutorial [Python a
    - All reviews made within the past month.
 
 ### Edit or Delete a food or establishment review
-1a. Upon clicking a food in '/customer/food-list', the review section of the page for the food would be seen.
-1b. Upon clicking 'View All Reviews' in '/customer/establishment-list', the review section of the page for the establishment would be seen.
+1. Upon clicking a food in '/customer/food-list', the review section of the page for the food would be seen.
+1. Upon clicking 'View All Reviews' in '/customer/establishment-list', the review section of the page for the establishment would be seen.
 2. You can see a sub navbar and upon clicking the 'Your Reviews' section, you would be redirected towards all your reviews upon which you can edit or delete them.
 
    - In deleting, simply pressing the delete button would delete that review
