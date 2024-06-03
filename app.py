@@ -420,8 +420,7 @@ def see_est():
                 '1-1.99': 'AND average_rating BETWEEN 1 AND 1.99',
                 '2-2.99': 'AND average_rating BETWEEN 2 AND 2.99',
                 '3-3.99': 'AND average_rating BETWEEN 3 AND 3.99',
-                '4-4.99': 'AND average_rating BETWEEN 4 AND 4.99',
-                '5': 'AND average_rating = 5'
+                '4-5': 'AND average_rating BETWEEN 4 AND 5',
             }
             query += f" {filter_query.get(filter_by, '')}"
 
@@ -543,8 +542,7 @@ def view_est():
                 '1-1.99': 'WHERE E.average_rating BETWEEN 1 AND 1.99',
                 '2-2.99': 'WHERE E.average_rating BETWEEN 2 AND 2.99',
                 '3-3.99': 'WHERE E.average_rating BETWEEN 3 AND 3.99',
-                '4-4.99': 'WHERE E.average_rating BETWEEN 4 AND 4.99',
-                '5': 'WHERE E.average_rating = 5'
+                '4-5': 'WHERE E.average_rating BETWEEN 4 AND 5',
             }
             query += f" {filter_query.get(filter_by, '')}"
 
