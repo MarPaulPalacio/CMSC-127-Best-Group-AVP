@@ -30,7 +30,7 @@ p = "5432"
 db_n = "project_db"
 
 # LOCAL Construct the connection string
-connection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
+# supabase_connection_string = f"dbname={db_n} user={un} password={pw} host={hn} port={p}"
 
 # Function to create tables
 def create_tables():
@@ -439,53 +439,52 @@ def view_est():
         return redirect(url_for('login'))
         
     if request.method == 'GET':
+        # Retrieve sorting and filtering parameters from the request URL
+        sort_by = request.args.get('sort')
+        filter_by = request.args.get('filter')
 
-    # Retrieve sorting and filtering parameters from the request URL
-    sort_by = request.args.get('sort')
-    filter_by = request.args.get('filter')
+        # Connecting to database
+        connection = psycopg2.connect(supabase_connection_string)
+        cursor = connection.cursor()
 
-    # Connecting to database
-    connection = psycopg2.connect(supabase_connection_string)
-    cursor = connection.cursor()
+        # SQL query to retrieve establishment details along with their reviews
+        query = """
+            SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
+            FROM ESTABLISHMENT E
+            LEFT JOIN (
+                SELECT establishment_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', establishment_review, 'datetime', review_datetime)) AS reviews
+                FROM ESTABLISHMENT_REVIEW
+                GROUP BY establishment_id
+            ) RE ON E.establishment_id = RE.establishment_id
+        """
 
-    # SQL query to retrieve establishment details along with their reviews
-    query = """
-        SELECT E.establishment_id, E.establishment_name, E.address_location, E.average_rating, COALESCE(RE.reviews, '{}') AS reviews
-        FROM ESTABLISHMENT E
-        LEFT JOIN (
-            SELECT establishment_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', establishment_review, 'datetime', review_datetime)) AS reviews
-            FROM ESTABLISHMENT_REVIEW
-            GROUP BY establishment_id
-        ) RE ON E.establishment_id = RE.establishment_id
-    """
+        # Apply filtering based on average rating if a filter is specified
+        if filter_by:
+            filter_query = {
+                '1-1.99': 'WHERE E.average_rating BETWEEN 1 AND 1.99',
+                '2-2.99': 'WHERE E.average_rating BETWEEN 2 AND 2.99',
+                '3-3.99': 'WHERE E.average_rating BETWEEN 3 AND 3.99',
+                '4-4.99': 'WHERE E.average_rating BETWEEN 4 AND 4.99',
+                '5': 'WHERE E.average_rating = 5'
+            }
+            query += f" {filter_query.get(filter_by, '')}"
 
-    # Apply filtering based on average rating if a filter is specified
-    if filter_by:
-        filter_query = {
-            '1-1.99': 'WHERE E.average_rating BETWEEN 1 AND 1.99',
-            '2-2.99': 'WHERE E.average_rating BETWEEN 2 AND 2.99',
-            '3-3.99': 'WHERE E.average_rating BETWEEN 3 AND 3.99',
-            '4-4.99': 'WHERE E.average_rating BETWEEN 4 AND 4.99',
-            '5': 'WHERE E.average_rating = 5'
-        }
-        query += f" {filter_query.get(filter_by, '')}"
+        # Apply sorting based on the specified sort parameter
+        if sort_by:
+            sort_query = {
+                'name_asc': 'ORDER BY E.establishment_name ASC',
+                'name_desc': 'ORDER BY E.establishment_name DESC',
+                'rating_asc': 'ORDER BY E.average_rating ASC',
+                'rating_desc': 'ORDER BY E.average_rating DESC'
+            }
+            query += f" {sort_query.get(sort_by, '')}"
 
-    # Apply sorting based on the specified sort parameter
-    if sort_by:
-        sort_query = {
-            'name_asc': 'ORDER BY E.establishment_name ASC',
-            'name_desc': 'ORDER BY E.establishment_name DESC',
-            'rating_asc': 'ORDER BY E.average_rating ASC',
-            'rating_desc': 'ORDER BY E.average_rating DESC'
-        }
-        query += f" {sort_query.get(sort_by, '')}"
-
-    # Execute the final SQL query
-    cursor.execute(query)
-    # Fetch all the results from the executed query
-    establishments = cursor.fetchall()
-    # Close database
-    connection.close()
+        # Execute the final SQL query
+        cursor.execute(query)
+        # Fetch all the results from the executed query
+        establishments = cursor.fetchall()
+        # Close database
+        connection.close()
 
         return render_template("ViewEst.html", establishments=establishments)
     elif request.method=='POST':
@@ -700,82 +699,85 @@ def view_all_fd():
     if 'user_id' not in session:
         flash("You need to login first.", "error")
         return redirect(url_for('login'))
-    if request.method == 'GET':
-        # Retrieve sorting and filtering parameters from the request URL
-        sort_by = request.args.get('sort')
-        filter_by = request.args.get('filter')
 
-        # Connect to the database
-        connection = psycopg2.connect(supabase_connection_string)
-        cursor = connection.cursor()
+    # Initialize query parameters
+    sort_by = None
+    filter_by = None
+    food_search = None
+    price_range = None
 
-        # Query to select all food items and their reviews
-        query = """
-            SELECT F.food_id, F.foodname, F.price, F.food_type, F.average_rating, COALESCE(FR.reviews, '{}') AS reviews
-            FROM FOOD F
-            LEFT JOIN (
-                SELECT food_id, json_agg(json_build_object('review_id', review_id, 'user_id', user_id, 'rating', rating, 'review', food_review, 'datetime', review_datetime)) AS reviews
-                FROM FOOD_REVIEW
-                GROUP BY food_id
-            ) FR ON F.food_id = FR.food_id
-        """
-
-        # Apply filtering based on food type if a filter is specified
-        if filter_by:
-            query += f" WHERE F.food_type = '{filter_by.capitalize()}'"
-
-        # Apply sorting based on the specified sort parameter
-        if sort_by:
-            sort_query = {
-                'name_asc': 'ORDER BY F.foodname ASC',
-                'name_desc': 'ORDER BY F.foodname DESC',
-                'rating_asc': 'ORDER BY F.average_rating ASC NULLS LAST',
-                'rating_desc': 'ORDER BY F.average_rating DESC NULLS LAST'
-            }
-            query += f" {sort_query.get(sort_by, '')}"
-
-        # Execute the final SQL query
-        cursor.execute(query)
-        # Fetch all the results from the executed query
-        food_items = cursor.fetchall()
-        # Close database connection
-        connection.close()
-
-        return render_template("ViewFood.html", food_items=food_items, show_establishment_name = True)
-
-    elif request.method =='POST':
-        spl_word = '-'
+    # Handle POST requests for form submissions
+    if request.method == 'POST':
         food_search = request.form.get('food_search')
         price_range = request.form.get('price_range')
-        food_type = request.form.get('type')
-        print("Price range is:" + price_range)
+        filter_by = request.form.get('filter')
+        sort_by = request.form.get('sort')
         
-        query_params = [f"%{food_search}%"]
-        
-        # Building dynamic query based on provided filters
-        food_name_query = """SELECT FOOD.food_id, FOOD.foodname, FOOD.price, FOOD.food_type, FOOD.average_rating, ESTABLISHMENT.establishment_name 
-                             FROM FOOD 
-                             JOIN ESTABLISHMENT ON FOOD.establishment_id = ESTABLISHMENT.establishment_id 
-                             WHERE foodname ILIKE %s"""
-        
-        if price_range != "none":
-            min_price, max_price = map(int, price_range.split(spl_word))
-            food_name_query += " AND price BETWEEN %s AND %s"
-            query_params.extend([min_price, max_price])
-        
-        if food_type != "none":
-            food_name_query += " AND FOOD.food_type = %s"
-            query_params.append(food_type)
-        
-        # Connect to the database
-        with psycopg2.connect(supabase_connection_string) as connection:
-            with connection.cursor() as cursor:
-                cursor.execute(food_name_query, query_params)
-                food_items = cursor.fetchall()
+        # Redirect to the GET route with query parameters
+        return redirect(url_for('view_all_fd', food_search=food_search, price_range=price_range, filter=filter_by, sort=sort_by))
 
-        return render_template('ViewFood.html', food_items=food_items, show_establishment_name=True)
+    # Handle GET requests for URL parameters
+    elif request.method == 'GET':
+        food_search = request.args.get('food_search')
+        price_range = request.args.get('price_range')
+        filter_by = request.args.get('filter')
+        sort_by = request.args.get('sort')
 
-# Read food items of an establishment as a Customer
+    # Connect to the database
+    connection = psycopg2.connect(supabase_connection_string)
+    cursor = connection.cursor()
+
+    # Base query to select all food items
+    query = """
+        SELECT F.food_id, F.foodname, F.price, F.food_type, F.average_rating, E.establishment_name
+        FROM FOOD F
+        JOIN ESTABLISHMENT E ON F.establishment_id = E.establishment_id
+    """
+    
+    query_params = []
+
+    # Apply filtering based on food type if a filter is specified
+    if filter_by and filter_by != "none":
+        query += " WHERE F.food_type = %s"
+        query_params.append(filter_by)
+
+    # Apply search filter
+    if food_search:
+        if "WHERE" in query:
+            query += " AND F.foodname ILIKE %s"
+        else:
+            query += " WHERE F.foodname ILIKE %s"
+        query_params.append(f"%{food_search}%")
+
+    # Apply price range filtering
+    if price_range and price_range != "none":
+        min_price, max_price = map(int, price_range.split('-'))
+        if "WHERE" in query:
+            query += " AND F.price BETWEEN %s AND %s"
+        else:
+            query += " WHERE F.price BETWEEN %s AND %s"
+        query_params.extend([min_price, max_price])
+
+    # Apply sorting based on the specified sort parameter
+    if sort_by:
+        sort_query = {
+            'name_asc': 'ORDER BY F.foodname ASC',
+            'name_desc': 'ORDER BY F.foodname DESC',
+            'rating_asc': 'ORDER BY F.average_rating ASC NULLS LAST',
+            'rating_desc': 'ORDER BY F.average_rating DESC NULLS LAST'
+        }
+        query += f" {sort_query.get(sort_by, '')}"
+
+    # Execute the final SQL query
+    cursor.execute(query, query_params)
+    # Fetch all the results from the executed query
+    food_items = cursor.fetchall()
+    # Close database connection
+    connection.close()
+
+    return render_template("ViewFood.html", food_items=food_items, show_establishment_name=True)
+
+# Read food item of an establishment as a Customer
 @app.route('/customer/food-list/<int:establishment_id>', methods=['GET'])
 def view_fd(establishment_id):
     # Check if user is logged in
@@ -1186,7 +1188,8 @@ def review_food(food_id):
         
         flash("Review submitted successfully!", "success")
         return redirect(url_for('view_food'))
-    
+
+# Update food review as customer
 @app.route('/customer/update/review-food/<int:review_id>/<int:food_id>', methods=['GET', 'POST'])
 def update_review_food(review_id, food_id):
     if request.method == 'GET':
